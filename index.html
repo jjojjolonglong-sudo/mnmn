@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mnmn · 이미지 관리</title>
+<style>
+:root{--bg:#fafaf7;--fg:#222;--mut:#777;--card:#fff;--ln:#ddd;--ac:#2f6fed;--rd:#d33;--gn:#2a8a4a}
+@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#eee;--mut:#999;--card:#222226;--ln:#38383e;--ac:#6b9bff;--rd:#ff6b6b;--gn:#5fd08a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--bg);z-index:5;flex-wrap:wrap}
+header b{font-size:16px;margin-right:auto}
+button,select,input{font:inherit;color:inherit;background:var(--card);border:1px solid var(--ln);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}button:disabled{opacity:.4;cursor:default}button.on{border-color:var(--ac);color:var(--ac);font-weight:600}button.danger{color:var(--rd);border-color:var(--rd)}
+main{padding:14px;max-width:1100px;margin:0 auto}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}.sum{color:var(--mut)}
+#msg{padding:8px 12px;margin:10px 0;border-radius:6px;background:var(--card);border:1px solid var(--ln)}#msg.err{color:var(--rd);border-color:var(--rd)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:6px;position:relative;font-size:12px}
+.c.sel{outline:2px solid var(--rd)}.c img{width:100%;height:150px;object-fit:contain;background:#8881;border-radius:4px;display:block}
+.c input{position:absolute;top:10px;left:10px;width:18px;height:18px;padding:0}
+.t{color:var(--mut);word-break:break-all}.u{color:var(--gn)}.n{color:var(--rd);font-weight:600}
+.row{display:flex;gap:10px;align-items:center;padding:6px;border-bottom:1px solid var(--ln)}.row img{width:48px;height:48px;object-fit:contain;background:#8881;border-radius:4px}.row .t{flex:1}
+#login{max-width:320px;margin:15vh auto;padding:0 14px;display:grid;gap:8px}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h2>mnmn · 이미지 관리</h2>
+  <input id="em" type="email" placeholder="이메일" autocomplete="username">
+  <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+  <button id="go" class="on">로그인</button>
+  <div id="lmsg" class="n"></div>
+</div>
+<div id="app" hidden>
+  <header><b>mnmn</b>
+    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button>
+    <button id="out">로그아웃</button>
+  </header>
+  <main><div id="msg" hidden></div><div id="view"></div></main>
+</div>
+<script src="media.js"></script>
+<script>
+const SB='https://rtvvajhsnwkkrmncyfbs.supabase.co';
+const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0dnZhamhzbndra3JtbmN5ZmJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NjkwMTEsImV4cCI6MjEwNzA0NTAxMX0.O2aLLeazv_FhUhbVAkp4vz3pw8GPb_683dUu7Et1Cwk';
+const W='https://media.jjojjolonglong.workers.dev';
+/* 이미지 해시가 저장되는 곳: [테이블, 컬럼]. 새 앱/컬럼이 생기면 여기에 한 줄 추가 */
+const SRC=[['bkbk_books','cover'],['mvmv_movie','poster'],['mvmv_movie_people','thumb'],['mvmv_scene','image'],['didi_category','image_url'],['didi_index','image_url'],['didi_log','image_url']];
+const ID_TABLES=['didi_log','didi_index','didi_category','mvmv_scene'];   // 원본(inbox)이 행 id로 저장되는 테이블
+const $=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':(n/1048576).toFixed(1)+'MB';
+const day=d=>new Date(d).toLocaleDateString('ko-KR');
+const hashOf=k=>k.split('/').pop().replace(/\.\w+$/,'');
+
+/* ---------- 로그인 ---------- */
+let SES=null;try{SES=JSON.parse(localStorage.getItem('mnmn_ses')||'null')}catch(e){}
+const saveSes=s=>{SES=s;try{s?localStorage.setItem('mnmn_ses',JSON.stringify(s)):localStorage.removeItem('mnmn_ses')}catch(e){}};
+async function gotrue(grant,body){
+  const r=await fetch(`${SB}/auth/v1/token?grant_type=${grant}`,{method:'POST',headers:{apikey:ANON,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error_description||j.msg||'로그인 실패');
+  j.expires_at=Date.now()+j.expires_in*1000;return j;
+}
+let rf=null;
+async function token(){
+  if(!SES)throw new Error('로그인이 필요해요');
+  if(SES.expires_at-Date.now()<60000){rf=rf||gotrue('refresh_token',{refresh_token:SES.refresh_token}).then(s=>{saveSes(s)}).finally(()=>{rf=null});await rf}
+  return SES.access_token;
+}
+Media.init({getToken:token});
+
+/* ---------- Supabase 읽기 (1000행씩 이어서) ---------- */
+async function rows(table,sel,filter){
+  const out=[];
+  for(let from=0;;from+=1000){
+    const r=await fetch(`${SB}/rest/v1/${table}?select=${sel}${filter||''}`,{headers:{apikey:ANON,Authorization:'Bearer '+await token(),Range:`${from}-${from+999}`,'Range-Unit':'items'}});
+    if(r.status===416)break;if(!r.ok)throw new Error(`${table}: HTTP ${r.status}`);
+    const j=await r.json();out.push(...j);if(j.length<1000)break;
+  }
+  return out;
+}
+async function scan(){   // 해시 → {'테이블.컬럼': 개수}
+  const use=new Map();
+  for(const [t,c] of SRC)for(const r of await rows(t,c,`&${c}=not.is.null`)){
+    const h=r[c];if(!h)continue;const m=use.get(h)||{},k=t+'.'+c;m[k]=(m[k]||0)+1;use.set(h,m);
+  }
+  return use;
+}
+
+/* ---------- 상태 / 화면 ---------- */
+const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set()};
+const say=(t,err)=>{const m=$('#msg');m.hidden=!t;m.className=err?'err':'';m.textContent=t||''};
+const fresh=o=>Date.now()-o.at<864e5;   // 24시간 안에 올라온 것은 저장 직전일 수 있어 삭제 후보에서 제외
+const pick=()=>[...S.sel];
+
+async function load(){
+  say('불러오는 중…');S.sel.clear();
+  try{
+    if(S.tab==='img'){
+      const [objs,use]=await Promise.all([Media.list('images/'),scan()]);
+      S.imgs=objs.map(o=>({key:o.key,h:hashOf(o.key),size:o.size,at:new Date(o.uploaded),use:use.get(hashOf(o.key))||null})).sort((a,b)=>b.at-a.at);
+    }else if(S.tab==='trash'){
+      S.trash=(await Media.list('trash/')).map(o=>({key:o.key,size:o.size,at:new Date(o.uploaded)})).sort((a,b)=>b.at-a.at);
+    }else{
+      const ids=new Set();for(const t of ID_TABLES)(await rows(t,'id')).forEach(r=>ids.add(r.id));
+      S.inbox=(await Media.pending()).map(o=>({...o,at:new Date(o.uploaded),linked:ids.has(o.id)})).sort((a,b)=>b.at-a.at);
+    }
+    say('');
+  }catch(e){say(e.message,1)}
+  render();
+}
+function render(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():vInbox();
+  if(S.tab==='trash')document.querySelectorAll('img[data-k]').forEach(async i=>{
+    try{const r=await fetch(`${W}/o/${i.dataset.k}`,{headers:{Authorization:'Bearer '+await token()}});if(r.ok)i.src=URL.createObjectURL(await r.blob())}catch(e){}
+  });
+}
+const uses=o=>o.use?Object.entries(o.use).map(([k,n])=>`${k}${n>1?' ×'+n:''}`).join(', '):'';
+function vImg(){
+  const L=S.imgs,un=L.filter(o=>!o.use),shown=L.filter(o=>S.filter==='all'||(S.filter==='used'?o.use:!o.use));
+  const sel=pick().length;
+  return `<div class="sum">총 ${L.length}장 · ${fmt(L.reduce((a,o)=>a+o.size,0))} · 사용 중 ${L.length-un.length}장 · <b class="n">미사용 ${un.length}장 (${fmt(un.reduce((a,o)=>a+o.size,0))})</b></div>
+  <div class="bar"><select id="flt"><option value="all"${S.filter==='all'?' selected':''}>전체</option><option value="used"${S.filter==='used'?' selected':''}>사용 중</option><option value="unused"${S.filter==='unused'?' selected':''}>미사용</option></select>
+  <button data-a="selun">미사용 전체 선택</button><button data-a="clr">선택 해제</button>
+  <button data-a="totrash" class="danger"${sel?'':' disabled'}>선택 ${sel}장 휴지통으로</button><button data-a="reload">새로고침</button></div>
+  <div class="grid">${shown.map(o=>{const ok=!o.use&&!fresh(o);return `<div class="c${S.sel.has(o.key)?' sel':''}">${ok?`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`:''}
+    <img src="${W}/o/${E(o.key)}" loading="lazy" alt=""><div class="t">${E(o.h.slice(0,10))} · ${fmt(o.size)}<br>${day(o.at)}</div>
+    <div>${o.use?`<span class="u">${E(uses(o))}</span>`:fresh(o)?'<span class="t">방금 올림 (24시간 보호)</span>':'<span class="n">미사용</span>'}</div></div>`}).join('')||'<p class="t">이미지가 없어요</p>'}</div>`;
+}
+function vTrash(){
+  const sel=pick().length;
+  return `<div class="sum">휴지통 ${S.trash.length}개 · ${fmt(S.trash.reduce((a,o)=>a+o.size,0))} · 7일 뒤 자동으로 지워져요</div>
+  <div class="bar"><button data-a="seltr">전체 선택</button><button data-a="clr">선택 해제</button><button data-a="restore"${sel?'':' disabled'}>선택 ${sel}개 복구</button><button data-a="purge" class="danger"${sel?'':' disabled'}>선택 ${sel}개 영구 삭제</button><button data-a="reload">새로고침</button></div>
+  ${S.trash.map(o=>`<div class="row"><input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>${o.key.startsWith('trash/images/')?`<img data-k="${E(o.key)}" alt="">`:'<span style="width:48px"></span>'}<div class="t">${E(o.key.slice(6))}<br>${fmt(o.size)} · ${day(o.at)}</div></div>`).join('')||'<p class="t">비어 있어요</p>'}`;
+}
+function vInbox(){
+  const orph=S.inbox.filter(o=>!o.linked),sel=pick().length;
+  return `<div class="sum">서버에 대기 중인 원본 ${S.inbox.length}개 · ${fmt(S.inbox.reduce((a,o)=>a+o.size,0))} (앱의 "원본 받기"로 PC 폴더에 가져가면 비워져요)</div>
+  <div class="bar"><button data-a="selor"${orph.length?'':' disabled'}>행 없는 원본 ${orph.length}개 선택</button><button data-a="clr">선택 해제</button><button data-a="totrash" class="danger"${sel?'':' disabled'}>선택 ${sel}개 휴지통으로</button><button data-a="reload">새로고침</button></div>
+  ${S.inbox.map(o=>`<div class="row">${o.linked?'<span style="width:18px"></span>':`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`}<div class="t">${E(o.id)}.${E(o.ext)}<br>${fmt(o.size)} · ${day(o.at)}</div><span class="${o.linked?'u':'n'}">${o.linked?'연결된 행 있음':'연결된 행 없음'}</span></div>`).join('')||'<p class="t">대기 중인 원본이 없어요</p>'}`;
+}
+
+/* ---------- 동작 ---------- */
+async function act(a){
+  try{
+    if(a==='reload')return load();
+    if(a==='clr'){S.sel.clear();return render()}
+    if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!fresh(o)).map(o=>o.key));return render()}
+    if(a==='seltr'){S.sel=new Set(S.trash.map(o=>o.key));return render()}
+    if(a==='selor'){S.sel=new Set(S.inbox.filter(o=>!o.linked).map(o=>o.key));return render()}
+    let keys=pick();if(!keys.length)return;
+    if(a==='totrash'){
+      if(S.tab==='img'){   // 삭제 직전에 사용처를 다시 확인해서, 그새 쓰이기 시작한 이미지는 건너뜀
+        say('사용처를 다시 확인하는 중…');const use=await scan(),n=keys.length;keys=keys.filter(k=>!use.has(hashOf(k)));
+        if(keys.length<n)say(`${n-keys.length}장은 그새 사용 중이라 제외했어요`);
+      }
+      if(!keys.length||!confirm(`${keys.length}개를 휴지통으로 옮길까요? (7일 안에는 복구할 수 있어요)`))return load();
+      const r=await Media.trash(keys);say(`휴지통으로 이동: ${r.moved.length}개`+(r.missing.length?` · 이미 없음 ${r.missing.length}개`:''));
+    }else if(a==='restore'){
+      const r=await Media.restore(keys);say(`복구: ${r.moved.length}개`);
+    }else if(a==='purge'){
+      if(!confirm(`${keys.length}개를 영구 삭제할까요? 되돌릴 수 없어요.`))return;
+      const r=await Media.purge(keys);say(`영구 삭제: ${r.moved.length}개`);
+    }
+    const m=$('#msg').textContent;await load();if(m)say(m);
+  }catch(e){say(e.message,1)}
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab]');if(t){S.tab=t.dataset.tab;S.sel.clear();load();return}
+  const b=e.target.closest('[data-a]');if(b)act(b.dataset.a);
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='flt'){S.filter=e.target.value;render();return}
+  const k=e.target.dataset.k;if(k&&e.target.type==='checkbox'){e.target.checked?S.sel.add(k):S.sel.delete(k);render()}
+});
+$('#out').onclick=()=>{saveSes(null);show()};
+$('#go').onclick=async()=>{
+  $('#lmsg').textContent='';
+  try{saveSes(await gotrue('password',{email:$('#em').value.trim(),password:$('#pw').value}));show()}catch(e){$('#lmsg').textContent=e.message}
+};
+$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click()});
+function show(){$('#login').hidden=!!SES;$('#app').hidden=!SES;if(SES)load()}
+show();
+</script>
+</body>
+</html>
