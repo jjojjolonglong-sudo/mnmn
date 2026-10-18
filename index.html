@@ -97,9 +97,9 @@ async function load(){
   try{
     if(S.tab==='img'){
       const [objs,use]=await Promise.all([Media.list('images/'),scan()]);
-      S.imgs=objs.map(o=>({key:o.key,h:hashOf(o.key),size:o.size,at:new Date(o.uploaded),use:use.get(hashOf(o.key))||null})).sort((a,b)=>b.at-a.at);
+      S.imgs=objs.filter(o=>!o.key.endsWith('/')).map(o=>({key:o.key,h:hashOf(o.key),size:o.size,at:new Date(o.uploaded),use:use.get(hashOf(o.key))||null})).sort((a,b)=>b.at-a.at);
     }else if(S.tab==='trash'){
-      S.trash=(await Media.list('trash/')).map(o=>({key:o.key,size:o.size,at:new Date(o.uploaded)})).sort((a,b)=>b.at-a.at);
+      S.trash=(await Media.list('trash/')).filter(o=>!o.key.endsWith('/')).map(o=>({key:o.key,size:o.size,at:new Date(o.uploaded)})).sort((a,b)=>b.at-a.at);
     }else{
       const ids=new Set();for(const t of ID_TABLES)(await rows(t,'id')).forEach(r=>ids.add(r.id));
       S.inbox=(await Media.pending()).map(o=>({...o,at:new Date(o.uploaded),linked:ids.has(o.id)})).sort((a,b)=>b.at-a.at);
