@@ -45,7 +45,7 @@ const SB='https://rtvvajhsnwkkrmncyfbs.supabase.co';
 const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0dnZhamhzbndra3JtbmN5ZmJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NjkwMTEsImV4cCI6MjEwNzA0NTAxMX0.O2aLLeazv_FhUhbVAkp4vz3pw8GPb_683dUu7Et1Cwk';
 const W='https://media.jjojjolonglong.workers.dev';
 /* 이미지 해시가 저장되는 곳: [테이블, 컬럼]. 새 앱/컬럼이 생기면 여기에 한 줄 추가 */
-const SRC=[['bkbk_books','cover'],['mvmv_movie','poster'],['mvmv_movie_people','thumb'],['mvmv_scene','image'],['didi_category','image_url'],['didi_index','image_url'],['didi_log','image_url']];
+const SRC=[['bkbk_books','cover'],['mvmv_movie','poster'],['mvmv_movie_people','thumb'],['mvmv_scene','image'],['didi_category','image_url'],['didi_index','image_url'],['didi_log','image_url'],['wkwk_work','cover']];
 const ID_TABLES=['didi_log','didi_index','didi_category','mvmv_scene'];   // 원본(inbox)이 행 id로 저장되는 테이블
 const $=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n<1024?n+'B':n<1048576?(n/1024).toFixed(1)+'KB':(n/1048576).toFixed(1)+'MB';
