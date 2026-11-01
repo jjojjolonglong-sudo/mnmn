@@ -11,9 +11,11 @@
     FSFS_ASSETS: 'https://fsfs-assets.jjojjolonglong.workers.dev',
     TZ: 'Asia/Seoul'
   };
-  /* 한국 시간 기준 날짜(YYYY-MM-DD). 인자가 없으면 오늘, Date나 시각 문자열을 주면 그 시각의 한국 날짜 */
+  /* 한국 시간 기준 날짜(YYYY-MM-DD). 인자가 없으면 오늘, Date나 시각(문자열·숫자)을 주면 그 시각의 한국 날짜.
+     한국은 서머타임이 없어 항상 UTC+9라서 덧셈으로 계산해요(달력처럼 수천 번 불러도 빠름) */
   root.kstDate = function (d) {
-    return new Intl.DateTimeFormat('sv-SE', { timeZone: C.TZ }).format(d == null ? new Date() : (d instanceof Date ? d : new Date(d)));
+    var t = d == null ? Date.now() : (d instanceof Date ? d.getTime() : new Date(d).getTime());
+    return isNaN(t) ? '' : new Date(t + 32400000).toISOString().slice(0, 10);
   };
   root.todayKST = function () { return root.kstDate(); };
 })(typeof window !== 'undefined' ? window : globalThis);
