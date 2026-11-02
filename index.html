@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mnmn · 이미지 관리</title>
+<script src="fonts.v1.js" data-app="mnmn"></script>
 <style>
 :root{--bg:#fafaf7;--fg:#222;--mut:#777;--card:#fff;--ln:#ddd;--ac:#2f6fed;--rd:#d33;--gn:#2a8a4a}
 @media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#eee;--mut:#999;--card:#222226;--ln:#38383e;--ac:#6b9bff;--rd:#ff6b6b;--gn:#5fd08a}}
@@ -21,6 +22,7 @@ main{padding:14px;max-width:1100px;margin:0 auto}
 .c input{position:absolute;top:10px;left:10px;width:18px;height:18px;padding:0}
 .t{color:var(--mut);word-break:break-all}.u{color:var(--gn)}.n{color:var(--rd);font-weight:600}
 .row{display:flex;gap:10px;align-items:center;padding:6px;border-bottom:1px solid var(--ln)}.row img{width:48px;height:48px;object-fit:contain;background:#8881;border-radius:4px}.row .t{flex:1}
+h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid var(--ln)}.fa select{width:100%;min-width:0}.fa .pv{grid-column:2/4;color:var(--mut);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fh{font-weight:600;margin-top:12px}.fh small{color:var(--mut);font-weight:400}
 #login{max-width:320px;margin:15vh auto;padding:0 14px;display:grid;gap:8px}[hidden]{display:none!important}
 </style>
 </head>
@@ -34,7 +36,7 @@ main{padding:14px;max-width:1100px;margin:0 auto}
 </div>
 <div id="app" hidden>
   <header><b>mnmn</b>
-    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button>
+    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="font">글꼴</button>
     <button id="out">로그아웃</button>
   </header>
   <main><div id="msg" hidden></div><div id="view"></div></main>
@@ -89,7 +91,7 @@ async function scan(){   // 해시 → {'테이블.컬럼': 개수}
 }
 
 /* ---------- 상태 / 화면 ---------- */
-const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set()};
+const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set(),fset:new Map(),fonts:[]};
 const say=(t,err)=>{const m=$('#msg');m.hidden=!t;m.className=err?'err':'';m.textContent=t||''};
 const fresh=o=>Date.now()-o.at<864e5;   // 24시간 안에 올라온 것은 저장 직전일 수 있어 삭제 후보에서 제외
 const pick=()=>[...S.sel];
@@ -100,6 +102,9 @@ async function load(){
     if(S.tab==='img'){
       const [objs,use]=await Promise.all([Media.list('images/'),scan()]);
       S.imgs=objs.filter(o=>!o.key.endsWith('/')).map(o=>({key:o.key,h:hashOf(o.key),size:o.size,at:new Date(o.uploaded),use:use.get(hashOf(o.key))||null})).sort((a,b)=>b.at-a.at);
+    }else if(S.tab==='font'){
+      const [st,fl]=await Promise.all([rows('mnmn_setting','app,role,value'),fetch(W+'/fonts',{headers:{Authorization:'Bearer '+await token()}}).then(r=>r.json())]);
+      S.fset=new Map(st.map(r=>[r.app+'|'+r.role,r.value]));S.fonts=(fl.fonts||[]).map(f=>({file:f.file||f.name,size:f.size}));
     }else if(S.tab==='trash'){
       S.trash=(await Media.list('trash/')).filter(o=>!o.key.endsWith('/')).map(o=>({key:o.key,size:o.size,at:new Date(o.uploaded)})).sort((a,b)=>b.at-a.at);
     }else{
@@ -112,7 +117,8 @@ async function load(){
 }
 function render(){
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
-  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():vInbox();
+  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():S.tab==='font'?vFont():vInbox();
+  if(S.tab==='font')fontPreview();
   if(S.tab==='trash')document.querySelectorAll('img[data-k]').forEach(async i=>{
     try{const r=await fetch(`${W}/o/${i.dataset.k}`,{headers:{Authorization:'Bearer '+await token()}});if(r.ok)i.src=URL.createObjectURL(await r.blob())}catch(e){}
   });
@@ -142,9 +148,77 @@ function vInbox(){
   ${S.inbox.map(o=>`<div class="row">${o.linked?'<span style="width:18px"></span>':`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`}<div class="t">${E(o.id)}.${E(o.ext)}<br>${fmt(o.size)} · ${day(o.at)}</div><span class="${o.linked?'u':'n'}">${o.linked?'연결된 행 있음':'연결된 행 없음'}</span></div>`).join('')||'<p class="t">대기 중인 원본이 없어요</p>'}`;
 }
 
+/* ---------- 글꼴 ---------- */
+const FV=(a,r)=>S.fset.get(a+'|'+r)||'';
+function fopt(sel){
+  const C=Fonts.CATALOG,o=(v,n)=>`<option value="${E(v)}"${v===sel?' selected':''}>${E(n)}</option>`;
+  return `<option value="">앱 기본값</option><optgroup label="기본 제공">${C.google.map(f=>o(f.v,f.n)).join('')}</optgroup><optgroup label="시스템 글꼴">${C.system.map(f=>o(f.v,f.n)).join('')}</optgroup>${S.fonts.length?`<optgroup label="내가 올린 글꼴">${S.fonts.map(f=>o('u:'+f.file,f.file)).join('')}</optgroup>`:''}`;
+}
+const fsel=(a,r,ko)=>`<select data-fs="${E(a)}|${E(r)}${ko?'.ko':''}">${fopt(FV(a,r+(ko?'.ko':'')))}</select>`;
+function vFont(){
+  const unify=FV('*','mode')==='unify';
+  return `<div class="sum">앱에 쓸 글꼴을 정해요. 바꾸면 바로 저장되고, 각 앱은 다음에 열 때(또는 새로고침) 반영돼요. 영문 글꼴은 영어·숫자에, 한글 글꼴은 한글에 써요(비워 두면 영문 글꼴이 한글까지 맡거나 앱 기본값).</div>
+  <h3>모든 앱 통일</h3>
+  <div class="bar"><label><input type="radio" name="fmode" value="per"${unify?'':' checked'}> 앱·영역별로 따로</label> <label><input type="radio" name="fmode" value="unify"${unify?' checked':''}> 모든 앱 모든 영역을 아래 글꼴 하나로 통일</label></div>
+  <div class="fa"><div>통일 글꼴</div>${fsel('*','all')}${fsel('*','all',1)}<div class="pv" data-pv="*|all"></div></div>
+  <h3>앱별 (영역마다)</h3>
+  ${Object.entries(Fonts.APPS).map(([a,A])=>`<div class="fh">${E(A.label)}</div>${Object.entries(A.roles).map(([r,R])=>`<div class="fa"><div>${E(R.label)}</div>${fsel(a,r)}${fsel(a,r,1)}<div class="pv" data-pv="${E(a)}|${E(r)}"></div></div>`).join('')}`).join('')}
+  <h3>올린 글꼴</h3>
+  <div class="bar"><input type="file" id="ffile" accept=".ttf,.otf,.woff,.woff2" multiple><button data-a="fup">올리기</button><span class="t">ttf · otf · woff · woff2 (20MB까지, 3MB 이하가 가볍고 빨라요)</span></div>
+  ${S.fonts.map(f=>`<div class="row"><div class="t">${E(f.file)}<br>${fmt(f.size)}</div><button data-fdel="${E(f.file)}" class="danger">삭제</button></div>`).join('')||'<p class="t">올린 글꼴이 없어요</p>'}`;
+}
+function fontPreview(){
+  const sample='가나다라마바 ABC abc 123 — The quick brown fox';
+  document.querySelectorAll('[data-pv]').forEach(el=>{
+    const [a,r]=el.dataset.pv.split('|'),en=FV(a,r),ko=FV(a,r+'.ko');[en,ko].forEach(Fonts.ensure);
+    const st=Fonts.stack(en,ko,'sans-serif');el.style.fontFamily=st||'';el.textContent=st?sample:'';
+  });
+}
+async function saveSet(key,val){
+  const [a,r]=key.split('|'),tk=await token();
+  const H={apikey:ANON,Authorization:'Bearer '+tk,'Content-Type':'application/json'};
+  const res=val?await fetch(`${SB}/rest/v1/mnmn_setting?on_conflict=user_id,app,role`,{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{app:a,role:r,value:val}])})
+    :await fetch(`${SB}/rest/v1/mnmn_setting?app=eq.${encodeURIComponent(a)}&role=eq.${encodeURIComponent(r)}`,{method:'DELETE',headers:H});
+  if(!res.ok)throw new Error('저장하지 못했어요 (HTTP '+res.status+')');
+  val?S.fset.set(key,val):S.fset.delete(key);
+}
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  try{
+    if(t.dataset.fs!==undefined){await saveSet(t.dataset.fs,t.value);say('저장했어요');fontPreview()}
+    else if(t.name==='fmode'){await saveSet('*|mode',t.value==='unify'?'unify':'');say(t.value==='unify'?'통일 켬':'통일 끔')}
+  }catch(x){say(x.message,1)}
+});
+async function fontUp(){
+  const fs=[...($('#ffile').files||[])];if(!fs.length)return say('올릴 파일을 먼저 고르세요',1);
+  try{
+    for(const f of fs){
+      say(`올리는 중… ${f.name}`);const fd=new FormData();fd.append('file',f);
+      const r=await fetch(W+'/font',{method:'POST',headers:{Authorization:'Bearer '+await token()},body:fd}),j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)throw new Error(f.name+': '+(j.error||'HTTP '+r.status));
+    }
+    await load();say(`${fs.length}개 올렸어요`);
+  }catch(x){say(x.message,1)}
+}
+async function fontDel(file){
+  const used=[...S.fset].filter(([,v])=>v==='u:'+file);
+  if(!confirm(`'${file}'을(를) 지울까요?`+(used.length?`\n지금 ${used.length}곳에서 쓰는 중이라 그 설정은 '앱 기본값'으로 돌아가요.`:'')))return;
+  try{
+    for(const [k] of used)await saveSet(k,'');
+    const r=await fetch(W+'/font/delete',{method:'POST',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:JSON.stringify({name:file})}),j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||'HTTP '+r.status);
+    await load();say('지웠어요');
+  }catch(x){say(x.message,1)}
+}
+document.addEventListener('click',e=>{
+  const d=e.target.closest('[data-fdel]');if(d)return fontDel(d.dataset.fdel);
+  if(e.target.closest('[data-a="fup"]'))fontUp();
+});
+
 /* ---------- 동작 ---------- */
 async function act(a){
   try{
+    if(a==='fup')return;
     if(a==='reload')return load();
     if(a==='clr'){S.sel.clear();return render()}
     if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!fresh(o)).map(o=>o.key));return render()}
