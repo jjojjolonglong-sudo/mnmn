@@ -36,13 +36,13 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
 </div>
 <div id="app" hidden>
   <header><b>mnmn</b>
-    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="font">글꼴</button>
+    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="dir">원본 폴더</button><button data-tab="font">글꼴</button>
     <button id="out">로그아웃</button>
   </header>
   <main><div id="msg" hidden></div><div id="view"></div></main>
 </div>
 <script src="config.js"></script>
-<script src="media.v1.js"></script>
+<script src="media.v2.js"></script>
 <script>
 const CFG=window.APP_CONFIG||{};
 const SB=CFG.SB||'https://rtvvajhsnwkkrmncyfbs.supabase.co';
@@ -90,6 +90,40 @@ async function scan(){   // 해시 → {'테이블.컬럼': 개수}
   return use;
 }
 
+
+/* ---------- 원본 폴더 (앱마다 따로 지정) ---------- */
+const DIR_APPS=[['','공통 (기본)'],['didi','didi 일기'],['mvmv','mvmv 영상'],['lvlv','lvlv 덕질노트'],['smsm','smsm 심즈']];
+const ROUTE={didi_log:'didi',didi_index:'didi',didi_category:'didi',mvmv_scene:'mvmv',lvlv_image:'lvlv',smsm_album:'smsm'};   // 원본이 저장되는 테이블 → 앱
+async function loadDirs(){
+  const out=[];
+  for(const [app,label] of DIR_APPS){
+    const own=await Media.folder.own(app),eff=await Media.folder.saved(app);
+    let perm='';if(eff&&typeof eff.queryPermission==='function')perm=await eff.queryPermission({mode:'readwrite'});
+    out.push({app,label,own:own?own.name:'',eff:eff?eff.name:'',perm,fallback:!own&&!!eff&&!!app});
+  }
+  return out;
+}
+function vDir(){
+  if(!Media.folder.supported)return '<div class="sum">이 브라우저에서는 폴더를 지정할 수 없어요. PC의 Chrome이나 Edge에서 열어 주세요.</div>';
+  return `<div class="sum">원본 사진을 모아 둘 PC 폴더를 앱마다 정해요. 앱 전용 폴더를 정하지 않은 앱은 "공통" 폴더를 써요. 이 폴더 지정은 이 PC·이 브라우저에만 저장돼요.</div>
+  ${S.dirs.map(d=>`<div class="row"><div class="t"><b>${E(d.label)}</b><br>${d.own?'📁 '+E(d.own):d.fallback?'공통 폴더 사용'+(d.eff?' ('+E(d.eff)+')':''):d.eff?'':'지정 안 됨'}${d.eff?(d.perm==='granted'?' · ✅ 권한 있음':' · ⚠️ 권한 필요'):''}</div>
+    <button data-a="dset" data-app="${E(d.app)}">폴더 지정</button>${d.eff&&d.perm!=='granted'?`<button data-a="dperm" data-app="${E(d.app)}">권한 허용</button>`:''}${d.own?`<button data-a="dclr" data-app="${E(d.app)}">해제</button>`:''}</div>`).join('')}
+  <h3>원본 받기</h3><div class="hint">폰에서 올려서 서버에 대기 중인 원본을 각 앱의 폴더로 가져오고 서버에서는 비워요. 가져오기 전에 위 폴더들의 권한이 "있음"이어야 해요.</div>
+  <button data-a="dpull">원본 받기</button><div id="dmsg" class="hint"></div>`;
+}
+async function dirAction(a,app){
+  if(a==='dset'){await Media.folder.connect(app);say('폴더를 지정했어요')}
+  else if(a==='dperm'){const h=await Media.folder.ensure(app);say(h?'권한을 허용했어요':'권한이 허용되지 않았어요',!h)}
+  else if(a==='dclr'){await Media.folder.forget(app);say('앱 전용 폴더를 해제했어요')}
+  S.dirs=await loadDirs();render();
+}
+async function dirPull(){
+  const m=$('#dmsg');m.textContent='서버의 대기 목록을 확인하는 중…';
+  const idApp=new Map();for(const t of ID_TABLES)(await rows(t,'id')).forEach(r=>idApp.set(r.id,ROUTE[t]||''));
+  const r=await Media.sync({route:id=>idApp.get(id)||'',onProgress:p=>m.textContent=`받는 중… ${p.done}/${p.total}`});
+  m.textContent=r.total?`완료: ${r.done}/${r.total}`+(r.failed.length?` · 실패 ${r.failed.length}개 (${[...new Set(r.failed.map(f=>f.error))].join(', ')})`:''):'대기 중인 원본이 없어요';
+}
+
 /* ---------- 상태 / 화면 ---------- */
 const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set(),fset:new Map(),fonts:[]};
 const say=(t,err)=>{const m=$('#msg');m.hidden=!t;m.className=err?'err':'';m.textContent=t||''};
@@ -105,6 +139,8 @@ async function load(){
     }else if(S.tab==='font'){
       const [st,fl]=await Promise.all([rows('mnmn_setting','app,role,value'),fetch(W+'/fonts',{headers:{Authorization:'Bearer '+await token()}}).then(r=>r.json())]);
       S.fset=new Map(st.map(r=>[r.app+'|'+r.role,r.value]));S.fonts=(fl.fonts||[]).map(f=>({file:f.file||f.name,size:f.size}));
+    }else if(S.tab==='dir'){
+      S.dirs=await loadDirs();
     }else if(S.tab==='trash'){
       S.trash=(await Media.list('trash/')).filter(o=>!o.key.endsWith('/')).map(o=>({key:o.key,size:o.size,at:new Date(o.uploaded)})).sort((a,b)=>b.at-a.at);
     }else{
@@ -117,7 +153,7 @@ async function load(){
 }
 function render(){
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
-  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():S.tab==='font'?vFont():vInbox();
+  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():S.tab==='font'?vFont():S.tab==='dir'?vDir():vInbox();
   if(S.tab==='font')fontPreview();
   if(S.tab==='trash')document.querySelectorAll('img[data-k]').forEach(async i=>{
     try{const r=await fetch(`${W}/o/${i.dataset.k}`,{headers:{Authorization:'Bearer '+await token()}});if(r.ok)i.src=URL.createObjectURL(await r.blob())}catch(e){}
@@ -143,7 +179,7 @@ function vTrash(){
 }
 function vInbox(){
   const orph=S.inbox.filter(o=>!o.linked),sel=pick().length;
-  return `<div class="sum">서버에 대기 중인 원본 ${S.inbox.length}개 · ${fmt(S.inbox.reduce((a,o)=>a+o.size,0))} (앱의 "원본 받기"로 PC 폴더에 가져가면 비워져요)</div>
+  return `<div class="sum">서버에 대기 중인 원본 ${S.inbox.length}개 · ${fmt(S.inbox.reduce((a,o)=>a+o.size,0))} ("원본 폴더" 탭의 "원본 받기"로 PC 폴더에 가져가면 비워져요)</div>
   <div class="bar"><button data-a="selor"${orph.length?'':' disabled'}>행 없는 원본 ${orph.length}개 선택</button><button data-a="clr">선택 해제</button><button data-a="totrash" class="danger"${sel?'':' disabled'}>선택 ${sel}개 휴지통으로</button><button data-a="reload">새로고침</button></div>
   ${S.inbox.map(o=>`<div class="row">${o.linked?'<span style="width:18px"></span>':`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`}<div class="t">${E(o.id)}.${E(o.ext)}<br>${fmt(o.size)} · ${day(o.at)}</div><span class="${o.linked?'u':'n'}">${o.linked?'연결된 행 있음':'연결된 행 없음'}</span></div>`).join('')||'<p class="t">대기 중인 원본이 없어요</p>'}`;
 }
@@ -216,9 +252,11 @@ document.addEventListener('click',e=>{
 });
 
 /* ---------- 동작 ---------- */
-async function act(a){
+async function act(a,el){
   try{
     if(a==='fup')return;
+    if(a==='dset'||a==='dperm'||a==='dclr')return dirAction(a,el.dataset.app);
+    if(a==='dpull')return dirPull();
     if(a==='reload')return load();
     if(a==='clr'){S.sel.clear();return render()}
     if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!fresh(o)).map(o=>o.key));return render()}
@@ -243,7 +281,7 @@ async function act(a){
 }
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-tab]');if(t){S.tab=t.dataset.tab;S.sel.clear();load();return}
-  const b=e.target.closest('[data-a]');if(b)act(b.dataset.a);
+  const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b);
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='flt'){S.filter=e.target.value;render();return}
