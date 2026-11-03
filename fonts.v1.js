@@ -61,7 +61,7 @@
     diti: { label: 'diti 사전', roles: { ui: { label: '본문', all: true, except: ['.logo'], fb: SANS }, mono: { label: '로고 (고정폭)', sel: '.logo', fb: MONO } } },
     tdtd: { label: 'tdtd 집필', roles: { ui: { label: 'UI (본문 영역 제외)', all: true, except: ['#ed', '#ed *'], fb: 'system-ui,sans-serif' } } },
     didi: { label: 'didi 다이어리', roles: ONE }, mgwg: { label: 'mgwg 디저트', roles: ONE }, lvlv: { label: 'lvlv 덕질노트', roles: ONE },
-    smsm: { label: 'smsm 심즈', roles: ONE }, fsfs: { label: 'fsfs 옷갈아입히기', roles: { ui: { label: '전체 (시계 제외)', all: true, except: ['.clk', '.clk *'], fb: SANS }, clk: { label: '시계 전광판 숫자', vars: ['--font-clk'], fb: MONO } } }, ogog: { label: 'ogog 뷰어', roles: ONE },
+    smsm: { label: 'smsm 심즈', roles: ONE }, fsfs: { label: 'fsfs 옷갈아입히기', roles: { ui: { label: '전체 (시계 제외)', all: true, except: ['.clk', '.clk *', '.mp', '.mp *'], fb: SANS }, clk: { label: '시계 전광판 숫자', vars: ['--font-clk'], fb: MONO } } }, ogog: { label: 'ogog 뷰어', roles: ONE },
     mnmn: { label: 'mnmn 관리', roles: ONE },
   };
 
