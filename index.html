@@ -23,6 +23,7 @@ main{padding:14px;max-width:1100px;margin:0 auto}
 .t{color:var(--mut);word-break:break-all}.u{color:var(--gn)}.n{color:var(--rd);font-weight:600}
 .row{display:flex;gap:10px;align-items:center;padding:6px;border-bottom:1px solid var(--ln)}.row img{width:48px;height:48px;object-fit:contain;background:#8881;border-radius:4px}.row .t{flex:1}
 h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid var(--ln)}.fa select{width:100%;min-width:0}.fa .pv{grid-column:2/4;color:var(--mut);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fh{font-weight:600;margin-top:12px}.fh small{color:var(--mut);font-weight:400}
+#busy{position:fixed;left:0;right:0;top:0;z-index:50;padding:9px 14px;background:#f5b400;color:#222;font-weight:700;text-align:center;box-shadow:0 2px 8px #0004}body.busy header,body.busy main{padding-top:0}body.busy #app{margin-top:40px}body.busy button,body.busy select{opacity:.5;cursor:wait}
 #login{max-width:320px;margin:15vh auto;padding:0 14px;display:grid;gap:8px}[hidden]{display:none!important}
 </style>
 </head>
@@ -34,6 +35,7 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
   <button id="go" class="on">로그인</button>
   <div id="lmsg" class="n"></div>
 </div>
+<div id="busy" hidden>⏳ 작업 중이에요. 끝날 때까지 화면을 전환하거나 새로고침하지 말고 기다려 주세요</div>
 <div id="app" hidden>
   <header><b>mnmn</b>
     <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="dir">원본 폴더</button><button data-tab="font">글꼴</button>
@@ -127,7 +129,8 @@ async function dirPull(){
 /* ---------- 상태 / 화면 ---------- */
 const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set(),fset:new Map(),fonts:[]};
 const say=(t,err)=>{const m=$('#msg');m.hidden=!t;m.className=err?'err':'';m.textContent=t||''};
-const fresh=o=>Date.now()-o.at<864e5;   // 24시간 안에 올라온 것은 저장 직전일 수 있어 삭제 후보에서 제외
+const fresh=o=>Date.now()-o.at<864e5;
+const prot=o=>!S.inclFresh&&fresh(o);   // 복구한 파일도 '새로 올라온 것'으로 보여 24시간 동안 보호됨   // 24시간 안에 올라온 것은 저장 직전일 수 있어 삭제 후보에서 제외
 const pick=()=>[...S.sel];
 
 async function load(){
@@ -163,13 +166,13 @@ const uses=o=>o.use?Object.entries(o.use).map(([k,n])=>`${k}${n>1?' ×'+n:''}`).
 function vImg(){
   const L=S.imgs,un=L.filter(o=>!o.use),shown=L.filter(o=>S.filter==='all'||(S.filter==='used'?o.use:!o.use));
   const sel=pick().length;
-  return `<div class="sum">총 ${L.length}장 · ${fmt(L.reduce((a,o)=>a+o.size,0))} · 사용 중 ${L.length-un.length}장 · <b class="n">미사용 ${un.length}장 (${fmt(un.reduce((a,o)=>a+o.size,0))})</b></div>
+  return `<div class="sum">총 ${L.length}장 · ${fmt(L.reduce((a,o)=>a+o.size,0))} · 사용 중 ${L.length-un.length}장 · <b class="n">미사용 ${un.length}장 (${fmt(un.reduce((a,o)=>a+o.size,0))})</b>${un.some(fresh)?` · 24시간 보호 중 ${un.filter(fresh).length}장`:''}</div>
   <div class="bar"><select id="flt"><option value="all"${S.filter==='all'?' selected':''}>전체</option><option value="used"${S.filter==='used'?' selected':''}>사용 중</option><option value="unused"${S.filter==='unused'?' selected':''}>미사용</option></select>
-  <button data-a="selun">미사용 전체 선택</button><button data-a="clr">선택 해제</button>
+  <button data-a="selun">미사용 전체 선택</button><label class="t"><input type="checkbox" id="incl"${S.inclFresh?' checked':''}> 방금 올리거나 복구한 것도 포함</label><button data-a="clr">선택 해제</button>
   <button data-a="totrash" class="danger"${sel?'':' disabled'}>선택 ${sel}장 휴지통으로</button><button data-a="reload">새로고침</button></div>
-  <div class="grid">${shown.map(o=>{const ok=!o.use&&!fresh(o);return `<div class="c${S.sel.has(o.key)?' sel':''}">${ok?`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`:''}
+  <div class="grid">${shown.map(o=>{const ok=!o.use&&!prot(o);return `<div class="c${S.sel.has(o.key)?' sel':''}">${ok?`<input type="checkbox" data-k="${E(o.key)}"${S.sel.has(o.key)?' checked':''}>`:''}
     <img src="${W}/o/${E(o.key)}" loading="lazy" alt=""><div class="t">${E(o.h.slice(0,10))} · ${fmt(o.size)}<br>${day(o.at)}</div>
-    <div>${o.use?`<span class="u">${E(uses(o))}</span>`:fresh(o)?'<span class="t">방금 올림 (24시간 보호)</span>':'<span class="n">미사용</span>'}</div></div>`}).join('')||'<p class="t">이미지가 없어요</p>'}</div>`;
+    <div>${o.use?`<span class="u">${E(uses(o))}</span>`:prot(o)?'<span class="t">방금 올림·복구 (24시간 보호)</span>':'<span class="n">미사용</span>'}</div></div>`}).join('')||'<p class="t">이미지가 없어요</p>'}</div>`;
 }
 function vTrash(){
   const sel=pick().length;
@@ -259,7 +262,7 @@ async function act(a,el){
     if(a==='dpull')return dirPull();
     if(a==='reload')return load();
     if(a==='clr'){S.sel.clear();return render()}
-    if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!fresh(o)).map(o=>o.key));return render()}
+    if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!prot(o)).map(o=>o.key));return render()}
     if(a==='seltr'){S.sel=new Set(S.trash.map(o=>o.key));return render()}
     if(a==='selor'){S.sel=new Set(S.inbox.filter(o=>!o.linked).map(o=>o.key));return render()}
     let keys=pick();if(!keys.length)return;
@@ -284,6 +287,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b);
 });
 document.addEventListener('change',e=>{
+  if(e.target.id==='incl'){S.inclFresh=e.target.checked;S.sel.clear();render();return}
   if(e.target.id==='flt'){S.filter=e.target.value;render();return}
   const k=e.target.dataset.k;if(k&&e.target.type==='checkbox'){e.target.checked?S.sel.add(k):S.sel.delete(k);render()}
 });
@@ -293,6 +297,14 @@ $('#go').onclick=async()=>{
   try{saveSes(await gotrue('password',{email:$('#em').value.trim(),password:$('#pw').value}));show()}catch(e){$('#lmsg').textContent=e.message}
 };
 $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click()});
+/* ---------- 작업 중 표시: 끝날 때까지 클릭을 막고 닫기·새로고침 경고 ---------- */
+let BUSY=0;
+function busyOn(){BUSY++;document.body.classList.add('busy');$('#busy').hidden=false}
+function busyOff(){BUSY=Math.max(0,BUSY-1);if(!BUSY){document.body.classList.remove('busy');$('#busy').hidden=true}}
+const wrapBusy=f=>async function(...a){busyOn();try{return await f.apply(this,a)}finally{busyOff()}};
+load=wrapBusy(load);act=wrapBusy(act);fontUp=wrapBusy(fontUp);fontDel=wrapBusy(fontDel);dirAction=wrapBusy(dirAction);dirPull=wrapBusy(dirPull);
+document.addEventListener('click',e=>{if(BUSY&&e.target.closest('button,[data-a],[data-tab],[data-fdel]')){e.stopPropagation();e.preventDefault()}},true);
+addEventListener('beforeunload',e=>{if(BUSY){e.preventDefault();e.returnValue=''}});
 function show(){$('#login').hidden=!!SES;$('#app').hidden=!SES;if(SES)load()}
 show();
 </script>
