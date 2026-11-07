@@ -34,16 +34,16 @@
 - **didi**: 컬렉션 탭, 상세·편집 창(A안), 우표 크롭·원본 보기, 독서·영상 자동 동기화 완료. 남은 것: 기록 편집창을 인덱스 편집창과 맞추기, 크롭한 사진을 원본에서 다시 자르기 확인. (독서 삭제·제목 변경 자동 반영 SQL `didi_sync_delete.sql`·`didi_sync_bookinfo.sql`은 전달함 — 실행 여부 확인.)
 - **diti**: 단어장·용례·뜻 선택 완료. 디자인은 종이 사전 느낌(크림 바탕·남색 잉크·버건디 포인트·각진 모서리)으로 결정 — 적용 확인 필요. 임시 "용례 입력" 탭은 사용자가 다 옮기면 삭제.
 - **mgwg**: Supabase 이전 완료(사진은 mnmn 방식 200px 썸네일). fsfs 배달 가게·디저트 이름에 쓰여요.
-- **bkbk · mvmv · wkwk · cdcd · smsm · mnmn**: 공용 파일(config.js·media·fonts) 전환과 설치 파일(manifest.webmanifest) 통일 완료. wkwk는 원고 탭(tdtd 연결) 있음.
+- **bkbk · mvmv · wkwk · cdcd · smsm · mnmn**: 공용 파일(config.js·media·fonts) 전환과 설치 파일(manifest.webmanifest) 통일 완료. wkwk는 원고 탭(tdtd 연결) 있음 — 2026-11-07 원고 줄마다 ↻(그 파일만 다시 읽기: 이름·수정일·미리보기 반영, 이름이 바뀌어도 번호로 찾음) 추가, v2·글꼴 줄 완료.
 - **mnmn**: 이미지·글꼴·원본 폴더 관리. 글꼴은 mnmn 글꼴 탭에서 앱별·영역별로 통제해요.
 
 ## 공용 파일 버전 현황
-- `media.v2.js`를 쓰는 앱: didi, mnmn, lvlv. 나머지(bkbk, cdcd, mgwg, mvmv, smsm, wkwk 등)는 아직 v1 — 각 앱을 고칠 때 v2로 옮기고 `Media.init({app:'앱이름'})`을 넣어요. 모든 앱이 v2가 되면 `media.v2.js`→`media.js` 정리를 사용자에게 제안하세요(옛 파일 삭제는 먼저 확인).
-- `fonts.v1.js` 태그가 아직 없는 앱: cdcd, wkwk, diti, tdtd, mgwg, smsm, ogog (fsfs는 확인 필요). 해당 앱을 고칠 때 함께 넣어요.
+- `media.v2.js`를 쓰는 앱: didi, mnmn, lvlv, wkwk. 나머지(bkbk, cdcd, mgwg, mvmv, smsm 등)는 아직 v1 — 각 앱을 고칠 때 v2로 옮기고 `Media.init({app:'앱이름'})`을 넣어요. 모든 앱이 v2가 되면 `media.v2.js`→`media.js` 정리를 사용자에게 제안하세요(옛 파일 삭제는 먼저 확인).
+- `fonts.v1.js` 태그가 아직 없는 앱: cdcd, diti, tdtd, mgwg, smsm, ogog (fsfs는 확인 필요). 해당 앱을 고칠 때 함께 넣어요.
 
 ## 기억해 둘 일
 - diti 임시 "용례 입력" 탭: 사용자가 다 옮겼다고 하면 지울 때가 됐다고 알려 주세요.
-- 남은 후보: wkwk 원고 목록 행별 새로고침 버튼, mvmv 아이콘, ogog 창 버튼 정리, bkbk maskable 아이콘 보완, 로그인 저장 키 통일, 설정을 DB로 옮기고 mnmn 설정 탭에서 관리(D 단계).
+- 남은 후보: mvmv 아이콘, ogog 창 버튼 정리, bkbk maskable 아이콘 보완, 로그인 저장 키 통일, 새로고침해도 보던 화면 유지(앱 전체, 사용자가 원할 때), 설정을 DB로 옮기고 mnmn 설정 탭에서 관리(D 단계).
 - 사용자가 새 요청을 하면 이 목록을 갱신하고, 일이 끝날 때마다 "앱별 현황"도 함께 고쳐 두세요.
 
 ## 새 대화·새 도구에서 이어 가는 법
