@@ -18,7 +18,7 @@ const css=`.mvtp{width:var(--tw,29px);height:var(--th,170px);flex:none;position:
 .mvt-tr{flex:1;margin-left:-1px;padding:0 3px calc(var(--th,170px)*.014) 0;display:flex;flex-direction:column;justify-content:flex-end}
 .mvt-nt{display:block;height:calc(var(--th,170px)*.065);border:1px solid #000b;border-radius:0;box-shadow:0 1px 0 #ffffff40,inset 0 1px 0 #ffffff24}
 .mvt-rc{position:absolute;left:2px;right:2px;top:23%;bottom:4.6%;display:flex;padding:2px;background:#0002;border:1px solid #0009;border-radius:3px;box-shadow:inset 0 1px 2px #000a,0 1px 0 #ffffff33}
-.mvt-sk{flex:1;min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;background:var(--s);border:1px solid #0007;box-shadow:inset 0 0 5px #0004,inset 6px 0 6px -6px #fff8;overflow:hidden}
+.mvt-sk{flex:1;min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;background:var(--s);border:1px solid #0007;box-shadow:inset 0 0 4px #0003;overflow:hidden}
 .mvt-bd{flex:none;display:block;position:relative}
 .mvt-sd{position:absolute;top:0;bottom:0;left:0;width:50%}.mvt-sd.c{left:28%;width:44%}
 .mvt-ph{flex:none;display:block;position:relative;height:calc(var(--tw,29px) - 14px);background:#0003 center/cover no-repeat}
