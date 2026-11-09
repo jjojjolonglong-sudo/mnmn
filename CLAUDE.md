@@ -1,10 +1,10 @@
-# 작업 규칙 (모든 앱 공통) — 2026-11-08 갱신
+# 작업 규칙 (모든 앱 공통) — 2026-11-09 갱신
 
 ## 사용자
 - 코딩을 전혀 모릅니다. 한국어로, 짧고 쉽게 설명하세요. 전문 용어는 풀어서 쓰세요.
 - 작업이 끝나면 "무엇이 바뀌었는지 한두 줄 + 확인할 방법(체크리스트)"만 알려 주세요.
 - 디자인이 크게 바뀌는 일은 먼저 제안하고, 사용자가 정한 뒤에 코딩하세요. 시안 이미지는 사용자가 요청할 때만 만드세요.
-- 푸시(GitHub에 올리기)는 사용자가 허락한 뒤에만 하세요. 푸시 전에는 바뀐 내용을 먼저 요약하세요. (Claude Code는 커밋까지만, 푸시는 사용자가 GitHub Desktop의 Push origin으로 해요.)
+- 푸시(GitHub에 올리기): 2026-11-09 사용자가 "Claude Code로 바로 repo에 올려서 반영해 달라"고 허락했어요(모든 repo 접근 허용). 이제 고친 뒤 Claude Code가 직접 커밋·푸시해요. 푸시 전에 `git fetch origin main`으로 최신 확인, 푸시 뒤에는 바뀐 내용을 한두 줄로 알려 주세요. 커밋 메시지 끝에는 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` 줄과 세션 링크 줄을 붙여요. (읽기만 되는 repo는 푸시 권한을 따로 요청해야 해요.)
 - 사용자는 UI 정렬·테두리·여백 같은 사소한 디테일에 매우 예민합니다. 화면을 건드리면 스크린샷으로 확인하고 한 번에 맞추세요.
 - 이미지를 자를 때는 가장자리에 흰 여백이 남지 않게, AI 업스케일(Real-ESRGAN 류)은 쓰지 마세요. 시안·목업 이미지는 사용자가 요청할 때만 만드세요.
 - 일하는 순서: 큰 작업은 먼저 계획(선택지)을 정리해 보여 주고, 사용자가 "진행"이라고 하면 시작해요. 일은 한 단계씩 끝낼 때마다 결과를 파일로 전달해요.
@@ -13,24 +13,25 @@
 - 각 앱은 GitHub Pages로 배포되는 정적 HTML입니다(저장소마다 `index.html` 하나가 중심).
 - 데이터: Supabase 한 프로젝트(https://rtvvajhsnwkkrmncyfbs.supabase.co). 사진: Cloudflare R2 + Worker(https://media.jjojjolonglong.workers.dev).
 - 앱 이름과 테이블 접두어: ogog(웹앱 뷰어), analoguesoul(집필, 쉬는 중), tdtd(단순 집필), mnmn(이미지·설정 관리), didi(다이어리), bkbk(독서), mvmv(영상), cdcd(음악), wkwk(소설 관리), mgwg(디저트), diti(사전·단어장), smsm(심즈 기록), lvlv(덕질노트), fsfs(옷갈아입히기).
+- **여러 앱이 함께 쓰는 테이블**(지우거나 이름·칸을 바꾸기 전에 꼭 확인): `bkbk_books`(bkbk·didi·diti·fsfs·mnmn), `bkbk_series`(bkbk·didi·diti·fsfs), `bkbk_word_use`↔`diti_words`(bkbk·diti), `mvmv_movie`(mvmv·didi·fsfs·mnmn), `mvmv_episode`·`mvmv_scene`(mvmv·fsfs), `wkwk_work`(wkwk·didi·fsfs·mnmn), `wkwk_event`(wkwk·fsfs), `lvlv_char/keyword/char_keyword/kind`(lvlv·fsfs), `lvlv_char/image/text`(lvlv·mnmn), `mgwg_item/store/sort`(mgwg·fsfs·mnmn), `cdcd_artist/music/playlist/playlist_track`(cdcd·fsfs), `cdcd_album`(cdcd·mnmn), `didi_*`(didi·mnmn), `smsm_album/profile`(smsm·mnmn). tdtd·ogog·analoguesoul은 Supabase 테이블을 쓰지 않아요. (2026-11-08 전수 조사: 어느 코드에서도 안 쓰던 `fsfs_meta`·`fsfs_inventory`·`fsfs_outfit` 3개를 `_old_…`로 이름만 바꿔 두었고, 2026-11-14 이후 문제없으면 `unused_2_drop.sql`로 삭제해요.)
 - 로그인은 앱마다 localStorage 키가 따로 있는 REST 로그인입니다. 시간은 항상 한국 시간(`config.js`의 `kstDate`, `todayKST`)을 씁니다.
 
 ## 공용 파일 (mnmn 저장소, https://jjojjolonglong-sudo.github.io/mnmn/)
 - `config.js`, `media.v1.js`, `media.v2.js`, `fonts.v1.js`.
 - `media.vN.js`는 한번 올리면 고치지 않습니다. 바꿔야 하면 새 번호 파일을 만들고, 앱을 고칠 때 하나씩 새 버전으로 옮깁니다(아직 v1을 쓰는 앱이 많습니다). v2를 쓰는 앱은 `Media.init({app:'앱이름'})`을 넣습니다.
 - 앱을 고칠 때 `<title>` 바로 아래에 `<script src=".../mnmn/fonts.v1.js" data-app="앱이름"></script>`가 없으면 넣습니다.
-- 설치 파일: `manifest.webmanifest`, `sw.js`(네트워크 우선, 캐시 이름에 버전). 기존 `id`는 바꾸지 않습니다.
+- 설치 파일: `manifest.webmanifest`, `sw.js`(네트워크 우선, 캐시 이름에 버전), 아이콘(`icon-192/512`, `icon-maskable-512`, `apple-touch-icon`). 기존 `id`는 바꾸지 않습니다. 앱 안에 「📲 설치」 버튼을 두고 설치 전에만 보여요(fsfs 방식 참고). 고친 뒤 안 바뀌어 보이면 새로고침(🔄)하거나 앱을 다시 설치해 보라고 안내하세요.
 
 ## 고칠 때 지킬 것
 - 고치기 전에 현재 파일이 최신인지 확인하세요(예전 사본을 고치지 않도록).
 - 고친 뒤 `<script>` 안의 코드를 `node --check`로 문법 검사하세요. 가능하면 브라우저로 열어서 확인하세요.
-- Supabase에서 실행할 SQL은 별도 `.sql` 파일로 만들어 주고 실행 방법을 설명하세요(사용자가 직접 실행합니다). `count(*)`는 쓰지 말고 `count(1)`을 쓰세요. SQL 편집기는 임시 테이블이 유지되지 않으니 실제 테이블을 만들고 마지막에 지우세요.
+- Supabase 커넥터가 연결돼 있어요(2026-11-09, 프로젝트 `jjojjo-retro`, ref `rtvvajhsnwkkrmncyfbs`). Claude가 읽기 SQL은 직접 실행해 확인할 수 있어요. 지우기·이름 바꾸기·테이블 변경 같은 위험한 SQL은 먼저 `.sql` 파일로 만들어 주고, 사용자가 확인한 뒤(SQL Editor에서 실행하거나 허락하면 커넥터로) 실행해요. `count(*)`는 쓰지 말고 `count(1)`을 쓰세요. SQL 편집기는 임시 테이블이 유지되지 않으니 실제 테이블을 만들고 마지막에 지우세요.
 - 커밋 메시지는 한국어로 짧게 쓰세요.
 - 목록에서 항목을 고를 때(인물·책·영화 등 모든 앱) 목록 스크롤이 맨 위로 튀지 않게, 고르기 전 스크롤 위치를 그대로 유지하세요(모바일에서 목록으로 돌아올 때도).
-- (모든 앱 공통, 2026-11-08) 휴대폰에서 스크롤 끝 텐션(바운스)과 맨 위에서 당겨 새로고침을 없애세요(`html,body{overscroll-behavior:none}`). 대신 PC·모바일 모두 상단 오른쪽에 새로고침 버튼(↻, `location.reload()`)을 두세요. 적용 완료: mgwg, smsm, mvmv. 아직: bkbk, cdcd, didi, diti, wkwk, lvlv, tdtd, ogog(각 앱을 고칠 때 함께).
+- (모든 앱 공통, 2026-11-08) 휴대폰에서 스크롤 끝 텐션(바운스)과 맨 위에서 당겨 새로고침을 없애세요(`html,body{overscroll-behavior:none}`). 대신 PC·모바일 모두 상단 오른쪽에 새로고침 버튼(↻, `location.reload()`)을 두세요. 적용 완료: mgwg, smsm, mvmv, fsfs. 아직: bkbk, cdcd, didi, diti, wkwk, lvlv, tdtd, ogog(각 앱을 고칠 때 함께).
 
 ## 앱별 현황 (2026-11-08 기준, 제가 아는 범위)
-- **fsfs**(시티 오브 레트로): 거의 완성. 마을 지도 3장·장소·행동·NPC·이벤트·아이템·배달/온라인 쇼핑·성소·선반·계절 효과·동네 고양이(30마리, 이름 짓기·도감·쪽지)·이벤트 조건 확장(기록 연동 등)까지 들어갔어요. 자세한 건 fsfs 저장소의 `CLAUDE.md`(= `fsfs_CLAUDE.md`)와 claude.ai 문서 "fsfs 값 관리 지도". 남은 것: 성소 촛불(시안 보고 결정), 이벤트 대사 다듬기, 사용자가 직접 올릴 에셋(의상·NPC 위치·고양이 이미지).
+- **fsfs**(시티 오브 레트로): 2026-11-09 현재 — 마을 지도 3장·장소·행동·NPC·이벤트·아이템·배달/온라인 쇼핑·서점·선반·계절 효과·동네 고양이(30마리, 이름 짓기·도감·쪽지)·이벤트 조건 확장까지 들어갔어요. 11-09 추가: **세이브는 클라우드(`fsfs_save`)가 기준**(같은 아이디면 어느 기기에서든 이어서, 기기와 클라우드가 다르면 확인창), **설치형(PWA)·모바일 가로 고정**(앱 안 설치 버튼·🔄, 세로로 들면 돌려 달라는 안내), 간판 새 디자인(베벨·나사·점 전광판 OPEN/CLOSED), 성소는 글을 남길 때마다 촛불이 하나씩(왼쪽 위부터 10개씩 선반 줄, 최대 40개, 비비드 색·블러 불꽃), 봄 꽃잎 모양 손질, 다이어리에 「하루 기록」(그날 다닌 곳·한 일·돈 자동 기록, 최근 30일), 관리자 유형 상세에 장소 목록. 자세한 건 fsfs 저장소의 `CLAUDE.md`와 claude.ai 문서 "fsfs 값 관리 지도". 남은 것: 성소 배경 이미지(GPT, 선반 줄 위치에 맞춰), 이벤트 대사 다듬기, 사용자가 직접 올릴 에셋(의상·NPC 위치·고양이 이미지), 우연한 마주침·코디 반응(제안 단계), 아바타 표정 리액션(그림은 보류).
 - **lvlv**(덕질노트): 2026-11-02 개편 완료 — 자동 저장, 키워드 분류를 자유롭게 추가(한 키워드를 여러 분류에), 키워드 관리창, 차갑고 오피스 같은 톤(회색·옅은 푸른색, 명조체·포스트잇 버림). `lvlv_char`에 `quote`(엔터로 어록 구분)·`profile`을 직접 두고 `lvlv_text`는 글감용만 남겼어요. fsfs는 lvlv 인물을 NPC로 **직접 참조**(수정은 lvlv에서만, 썸네일은 fsfs 인물 탭). 2026-11-07 화면 개편 — 목록은 이름만(초성 구분선), 이름 옆 편집 버튼, 편집은 '인물 정보 / 페이지 꾸미기' 탭, 이미지·글감은 하단 고정 띠(접기 가능), 앱은 목록+상세가 붙은 한 덩어리(창 높이에 꽉 차게, 페이지 영역이 남은 크기에 맞게 줄어듦 — 두 쪽은 최소 760px, 한 쪽은 최소 520px), 인물 정보 탭도 페이지 영역과 같은 크기, 이미지·글감 띠는 페이지 영역 바로 아래. 11-07 추가: 앱 높이는 내용에 맞춤(창보다 크면 창 높이), 첫 페이지는 프로필(작게)→어록(크게, 글자 14→11px 자동 축소, 넘치면 '외 N개 · 눌러서 모두 보기'), ＋·#·⚙ 화면은 팝업 대신 상세 자리에(새 인물·키워드 관리·설정), 키워드 관리에 ⇄ 합치기·찾기 추가, fsfs 번역 표시·fsfs 분류 선택 삭제, 설치 파일(manifest·sw·아이콘) 추가, 목록 정렬 버튼(이름순: ㄱㄴㄷ 묶음 / 출신별: 출신 묶음+이름순, 마지막 선택 기억), 풀네임 칸(`lvlv_char.full_name`, SQL `lvlv_full_name.sql` 실행 여부 확인).
 - **didi**: 컬렉션 탭, 상세·편집 창(A안), 우표 크롭·원본 보기, 독서·영상 자동 동기화(동기화 버튼 삭제), 크롭 다시 자르기, 독서·영상 상세에 각 앱 리뷰·별점 표시, 직사각 우표 아이콘까지 완료(2026-11-07). (독서 삭제·제목 변경 자동 반영 SQL `didi_sync_delete.sql`·`didi_sync_bookinfo.sql` 실행 여부 확인.)
 - **diti**: 단어장·용례·뜻 선택 완료. 디자인은 종이 사전 느낌(크림 바탕·남색 잉크·버건디 포인트·각진 모서리)으로 결정 — 적용 확인 필요. 임시 "용례 입력" 탭은 사용자가 다 옮기면 삭제. 2026-11-07 설치 파일(manifest·sw·둥근 책 아이콘) 추가.
@@ -51,8 +52,9 @@
 - 원본 이미지를 어떻게 저장·관리하는지(썸네일은 Cloudflare, 원본은 PC 폴더/서버 대기함, mnmn '원본 폴더' 탭에서 앱별 폴더 지정과 원본 받기) 사용자에게 쉽게 한 번 설명해 주세요. 설명했으면 이 줄을 지우세요.
 - fsfs(다른 대화에서 작업)에 전할 것: 테이프 라벨에 배우 썸네일을 넣으려면 fsfs도 `MvTape.html(영화, {img: 배우 썸네일 주소})`처럼 `img`를 넘겨야 해요(색·모양·연도는 자동 반영).
 - 남은 후보: ogog 창 버튼 정리, 로그인 저장 키 통일, 새로고침해도 보던 화면 유지(앱 전체, 사용자가 원할 때), 설정을 DB로 옮기고 mnmn 설정 탭에서 관리(D 단계).
+- 2026-11-14(토) 이후: `unused_2_drop.sql`(`_old_fsfs_meta/_old_fsfs_inventory/_old_fsfs_outfit` 삭제) 실행 여부 확인 — 알림 예약돼 있어요.
 - 사용자가 새 요청을 하면 이 목록을 갱신하고, 일이 끝날 때마다 "앱별 현황"도 함께 고쳐 두세요.
 
 ## 새 대화·새 도구에서 이어 가는 법
-- **Claude Code**: 저장소 폴더에 둔 `CLAUDE.md`를 자동으로 읽어요(공통 파일은 상위 폴더, fsfs 전용은 fsfs 저장소 최상위).
+- **Claude Code**: 저장소 폴더에 둔 `CLAUDE.md`를 자동으로 읽어요(이 공통 파일은 mnmn 저장소의 `CLAUDE.md`, fsfs 전용 내용은 fsfs 저장소 최상위의 `CLAUDE.md`). 공통 규칙·앱 현황은 mnmn 쪽에, fsfs 코드·값 위치는 fsfs 쪽에 적어요.
 - **claude.ai 새 대화**: `CLAUDE.md`는 자동으로 읽히지 않아요. 이 파일(와 해당 앱의 `index.html`, fsfs라면 `fsfs_CLAUDE.md`)을 첨부하고 "이 규칙대로 해 줘"라고 하면 돼요. 사용자에 대한 기억(선호·결정 이력)은 대화가 바뀌어도 이어져요.
