@@ -4,7 +4,7 @@
 - 코딩을 전혀 모릅니다. 한국어로, 짧고 쉽게 설명하세요. 전문 용어는 풀어서 쓰세요.
 - 작업이 끝나면 "무엇이 바뀌었는지 한두 줄 + 확인할 방법(체크리스트)"만 알려 주세요.
 - 디자인이 크게 바뀌는 일은 먼저 제안하고, 사용자가 정한 뒤에 코딩하세요. 시안 이미지는 사용자가 요청할 때만 만드세요.
-- 푸시(GitHub에 올리기): 2026-11-09 사용자가 "Claude Code로 바로 repo에 올려서 반영해 달라"고 허락했어요(모든 repo 접근 허용). 이제 고친 뒤 Claude Code가 직접 커밋·푸시해요. 푸시 전에 `git fetch origin main`으로 최신 확인, 푸시 뒤에는 바뀐 내용을 한두 줄로 알려 주세요. 커밋 메시지 끝에는 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` 줄과 세션 링크 줄을 붙여요. (읽기만 되는 repo는 푸시 권한을 따로 요청해야 해요.)
+- 푸시(GitHub에 올리기): 2026-11-09 사용자가 "Claude Code로 바로 repo에 올려서 반영해 달라"고 허락했어요(모든 repo 접근 허용). 이제 고친 뒤 Claude Code가 직접 커밋·푸시해요. 푸시 전에 `git fetch origin main`으로 최신 확인, 푸시 뒤에는 바뀐 내용을 한두 줄로 알려 주세요. 커밋 메시지 끝에는 `Co-Authored-By: Claude …` 줄(작업한 모델 이름)과 세션 링크 줄을 붙여요. (읽기만 되는 repo는 푸시 권한을 따로 요청해야 해요.)
 - 사용자는 UI 정렬·테두리·여백 같은 사소한 디테일에 매우 예민합니다. 화면을 건드리면 스크린샷으로 확인하고 한 번에 맞추세요.
 - 이미지를 자를 때는 가장자리에 흰 여백이 남지 않게, AI 업스케일(Real-ESRGAN 류)은 쓰지 마세요. 시안·목업 이미지는 사용자가 요청할 때만 만드세요.
 - 일하는 순서: 큰 작업은 먼저 계획(선택지)을 정리해 보여 주고, 사용자가 "진행"이라고 하면 시작해요. 일은 한 단계씩 끝낼 때마다 결과를 파일로 전달해요.
@@ -12,7 +12,7 @@
 ## 구성
 - 각 앱은 GitHub Pages로 배포되는 정적 HTML입니다(저장소마다 `index.html` 하나가 중심).
 - 데이터: Supabase 한 프로젝트(https://rtvvajhsnwkkrmncyfbs.supabase.co). 사진: Cloudflare R2 + Worker(https://media.jjojjolonglong.workers.dev).
-- 앱 이름과 테이블 접두어: ogog(웹앱 뷰어), analoguesoul(집필, 쉬는 중), tdtd(단순 집필), mnmn(이미지·설정 관리), didi(다이어리), bkbk(독서), mvmv(영상), cdcd(음악), wkwk(소설 관리), mgwg(디저트), diti(사전·단어장), smsm(심즈 기록), lvlv(덕질노트), fsfs(옷갈아입히기).
+- 앱 이름과 테이블 접두어: ogog(웹앱 뷰어), analoguesoul(집필, 쉬는 중), tdtd(단순 집필), mnmn(이미지·설정 관리), didi(다이어리), bkbk(독서), mvmv(영상), cdcd(음악), wkwk(소설 관리), mgwg(디저트), diti(사전·단어장), smsm(심즈 기록), lvlv(덕질노트), fsfs(옷갈아입히기), bdbd(체중·식단 기록, 2026-11-10 새로 만듦).
 - **여러 앱이 함께 쓰는 테이블**(지우거나 이름·칸을 바꾸기 전에 꼭 확인): `bkbk_books`(bkbk·didi·diti·fsfs·mnmn), `bkbk_series`(bkbk·didi·diti·fsfs), `bkbk_word_use`↔`diti_words`(bkbk·diti), `mvmv_movie`(mvmv·didi·fsfs·mnmn), `mvmv_episode`·`mvmv_scene`(mvmv·fsfs), `wkwk_work`(wkwk·didi·fsfs·mnmn), `wkwk_event`(wkwk·fsfs), `lvlv_char/keyword/char_keyword/kind`(lvlv·fsfs), `lvlv_char/image/text`(lvlv·mnmn), `mgwg_item/store/sort`(mgwg·fsfs·mnmn), `cdcd_artist/music/playlist/playlist_track`(cdcd·fsfs), `cdcd_album`(cdcd·mnmn), `didi_*`(didi·mnmn), `smsm_album/profile`(smsm·mnmn). tdtd·ogog·analoguesoul은 Supabase 테이블을 쓰지 않아요. (2026-11-08 전수 조사: 어느 코드에서도 안 쓰던 `fsfs_meta`·`fsfs_inventory`·`fsfs_outfit` 3개를 `_old_…`로 이름만 바꿔 두었고, 2026-11-14 이후 문제없으면 `unused_2_drop.sql`로 삭제해요.)
 - 로그인은 앱마다 localStorage 키가 따로 있는 REST 로그인입니다. 시간은 항상 한국 시간(`config.js`의 `kstDate`, `todayKST`)을 씁니다.
 
@@ -28,8 +28,8 @@
 - Supabase 커넥터가 연결돼 있어요(2026-11-09, 프로젝트 `jjojjo-retro`, ref `rtvvajhsnwkkrmncyfbs`). Claude가 읽기 SQL은 직접 실행해 확인할 수 있어요. 지우기·이름 바꾸기·테이블 변경 같은 위험한 SQL은 먼저 `.sql` 파일로 만들어 주고, 사용자가 확인한 뒤(SQL Editor에서 실행하거나 허락하면 커넥터로) 실행해요. `count(*)`는 쓰지 말고 `count(1)`을 쓰세요. SQL 편집기는 임시 테이블이 유지되지 않으니 실제 테이블을 만들고 마지막에 지우세요.
 - 커밋 메시지는 한국어로 짧게 쓰세요.
 - 목록에서 항목을 고를 때(인물·책·영화 등 모든 앱) 목록 스크롤이 맨 위로 튀지 않게, 고르기 전 스크롤 위치를 그대로 유지하세요(모바일에서 목록으로 돌아올 때도).
-- (모든 앱 공통, 2026-11-09) 설정 화면에 '앱 설치' 칸을 두세요: 크롬이 허락하면 설치 버튼(beforeinstallprompt), 이미 깔려 있으면 '지우고 다시 열면 버튼이 생겨요' 안내, 아이폰은 '공유 → 홈 화면에 추가' 안내. manifest에 `related_applications`(webapp, 자기 manifest 주소)를 넣으면 이미 설치됐는지 알 수 있어요. 적용 완료: bkbk, diti(설정창 없는 앱은 로그아웃 옆 📲 설치 버튼, 누르면 설치 또는 안내)(didi는 비슷한 안내 있음). 아직: 나머지 앱(각 앱을 고칠 때 함께).
-- (모든 앱 공통, 2026-11-08) 휴대폰에서 스크롤 끝 텐션(바운스)과 맨 위에서 당겨 새로고침을 없애세요(`html,body{overscroll-behavior:none}`). 대신 PC·모바일 모두 상단 오른쪽에 새로고침 버튼(↻, `location.reload()`)을 두세요. 적용 완료: mgwg, smsm, mvmv, fsfs, bkbk, diti. 아직: cdcd, didi, wkwk, lvlv, tdtd, ogog(각 앱을 고칠 때 함께).
+- (모든 앱 공통, 2026-11-09) 설정 화면에 '앱 설치' 칸을 두세요: 크롬이 허락하면 설치 버튼(beforeinstallprompt), 이미 깔려 있으면 '지우고 다시 열면 버튼이 생겨요' 안내, 아이폰은 '공유 → 홈 화면에 추가' 안내. manifest에 `related_applications`(webapp, 자기 manifest 주소)를 넣으면 이미 설치됐는지 알 수 있어요. 적용 완료: bkbk, bdbd, diti(설정창 없는 앱은 로그아웃 옆 📲 설치 버튼, 누르면 설치 또는 안내)(didi는 비슷한 안내 있음). 아직: 나머지 앱(각 앱을 고칠 때 함께).
+- (모든 앱 공통, 2026-11-08) 휴대폰에서 스크롤 끝 텐션(바운스)과 맨 위에서 당겨 새로고침을 없애세요(`html,body{overscroll-behavior:none}`). 대신 PC·모바일 모두 상단 오른쪽에 새로고침 버튼(↻, `location.reload()`)을 두세요. 적용 완료: mgwg, smsm, mvmv, fsfs, bkbk, diti, bdbd. 아직: cdcd, didi, wkwk, lvlv, tdtd, ogog(각 앱을 고칠 때 함께).
 
 ## 앱별 현황 (2026-11-08 기준, 제가 아는 범위)
 - **fsfs**(시티 오브 레트로): 2026-11-09 현재 — 마을 지도 3장·장소·행동·NPC·이벤트·아이템·배달/온라인 쇼핑·서점·선반·계절 효과·동네 고양이(30마리, 이름 짓기·도감·쪽지)·이벤트 조건 확장까지 들어갔어요. 11-09 추가: **세이브는 클라우드(`fsfs_save`)가 기준**(같은 아이디면 어느 기기에서든 이어서, 기기와 클라우드가 다르면 확인창), **설치형(PWA)·모바일 가로 고정**(앱 안 설치 버튼·🔄, 세로로 들면 돌려 달라는 안내), 간판 새 디자인(베벨·나사·점 전광판 OPEN/CLOSED), 성소는 글을 남길 때마다 촛불이 하나씩(왼쪽 위부터 10개씩 선반 줄, 최대 40개, 비비드 색·블러 불꽃), 봄 꽃잎 모양 손질, 다이어리에 「하루 기록」(그날 다닌 곳·한 일·돈·날씨 자동 기록, 최근 100일), 관리자 유형 상세에 장소 목록. 11-09 (2): **날씨 3단계**(비·눈 효과, 날짜마다 정해짐)와 날씨·실내외·영업·낮밤별 조명 세분화, CLOSED 간판 긴 걸이, **「길 위」 숨은 장소**(이동 중 12%로 우연한 마주침 이벤트 15개). 자세한 건 fsfs 저장소의 `CLAUDE.md`와 claude.ai 문서 "fsfs 값 관리 지도". 남은 것: 성소 배경 이미지(GPT, 선반 줄 위치에 맞춰), 이벤트 대사 다듬기, 사용자가 직접 올릴 에셋(의상·NPC 위치·고양이 이미지), 코디 반응(제안 단계), 아바타 표정 리액션(그림은 보류).
@@ -42,6 +42,7 @@
 - **mvmv**: 2026-11-08 — v2, 상단 ⚙ 옆 ↻, 설정의 원본 폴더·원본 받기 버튼 빼고 mnmn에서 관리, 새 TV 아이콘(빨간 몸통·컬러바, 사용자 그림을 단순화)·apple-touch-icon 추가. 같은 날 비디오테이프 그림(`mnmn/mvtape.v1.js`, fsfs와 공유) 개편 — 본체는 영화 색 4개 중 가장 선명한 색(무채색 없음), 라벨 위 본체 칸을 높이의 21%로 늘리고 가운데 세로선 오른쪽 아래에 각진 네모(왼쪽 변이 세로선과 겹침), 라벨 장식은 없음·위 띠·위 띠 두 줄·위아래 가는 띠·옆줄(맨 뒤) 중 하나, VHS 대신 일부만 개봉 연도, 일부 라벨에 출연진 맨 위 배우 썸네일(라벨 폭 꽉 찬 정사각형, mvmv가 `img`로 넘겨줌). 같은 날 영화 상세 정리 — 포스터 옆 제목~runtime(display는 Edit에서만), 그 아래 REVIEW(별점·코멘트) → CAST([사진] 배우명/역할명 역, 폭에 따라 한 줄 1~3명, 누르면 그 인물로) → EPISODES(시리즈) → SCENE 필름롤(누르면 이동 안 함). 배우 상세에도 출연 장면 필름롤. PEOPLE 위 목록은 두 줄(카드 크기는 영역 높이에 맞춤, 긴 이름은 …), 우측 상단 검색창(이름·국적·출연 작품명). 이어서: 상단 ↻·⚙를 탭 글자 줄에 맞춤, 설정의 이미지 서버(Media server) 칸 삭제(주소는 공용 config.js), 원본·글꼴 안내는 설정 맨 아래 'MANAGED IN MNMN'으로. 테이프 세로 장식은 라벨과 가장 비슷한 색으로 반반 또는 가운데 대칭, 라벨 광택 없음. 이어서: 별점은 글자 대신 그림(SVG, 반별 정확), 별점 입력은 10점 만점 숫자 ▼▲(1씩), 상세 분홍 제목 간격 2배, 인물 상세는 사진·정보 → FILMOGRAPHY(포스터·제목·연도 한 줄, 모바일 5개쯤·PC는 폭에 맞춤, 옆으로 넘김) → SCENE, 필름롤은 칸마다 멈추는 스크롤, 장면 순서 바꾸기 흔적 삭제.
 - **cdcd**: 2026-11-07 — 모바일(세로) 폭 꽉 채우기, 재생목록에 곡 여러 개 한 번에 추가, 앨범 고르면 가수 자동, 설정(관리) 화면은 플레이어 상자 안에, CD 커버 꽉 차게 + 유리 반사 띠.
 - **bkbk · mvmv · wkwk · cdcd · smsm · mnmn**: 공용 파일(config.js·media·fonts) 전환과 설치 파일(manifest.webmanifest) 통일 완료. wkwk는 원고 탭(tdtd 연결) 있음 — 2026-11-07 원고 줄마다 ↻(그 파일만 다시 읽기: 이름·수정일·미리보기 반영, 이름이 바뀌어도 번호로 찾음) 추가, v2·글꼴 줄 완료. 같은 날 추가: 매월 자동 집계 기록(출간된 작품, 빈 칸으로), 집계 정렬은 출간일 최근순, 작품은 상세 보기→편집(표지·제목·필명·로그라인·분량·가격·이벤트·별점·수입, 별점·수입은 잠금), 집계는 더블클릭으로 수정, 위 줄 고정+그 아래만 스크롤, 탭 아래 구분선, 로그라인 칸(`wkwk_work.logline`, SQL `wkwk_logline.sql` 실행 여부 확인).
+- **bdbd**(체중·식단 기록): 2026-11-10 새로 만듦(다른 대화의 초안 바탕). 탭은 오늘·달력·체성분·설정. 하루 기준 칼로리(기초대사량·활동량·목표 체중·기간으로 계산, 기초대사량 아래로는 안 내림) 대비 섭취−운동으로 달력에 성공/실패 도장. 음식은 코드에 박힌 기본 목록(100g 기준) + 내 음식 직접 입력. 저장은 테이블 하나 `bdbd_kv`(user_id·key·value jsonb·updated_at; key는 `pf` 내 정보, `bd` 체성분, `cf` 내 음식, `rc` 최근 음식, `d:날짜` 하루 식단·운동) — 기기(localStorage, `bdbd:` 접두어)에 먼저 저장하고 0.7초 뒤 서버로, 시작·온라인 복귀 때 서버와 비교해 더 최신 것을 씀. 로그인은 다른 앱과 같은 REST 로그인(`bdbd_ses`), 설정에 동기화·백업·앱 설치·로그아웃. 사진 없음(media 안 씀), 글꼴 줄·↻·바운스 없앰·설치 파일 적용됨. SQL `bdbd_setup.sql`은 커넥터로 실행 완료.
 - **mnmn**: 이미지·글꼴·원본 폴더 관리. 글꼴은 mnmn 글꼴 탭에서 앱별·영역별로 통제해요.
 
 ## 공용 파일 버전 현황
