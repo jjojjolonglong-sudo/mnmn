@@ -44,7 +44,8 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
   <main><div id="msg" hidden></div><div id="view"></div></main>
 </div>
 <script src="config.js"></script>
-<script src="media.v2.js"></script>
+<script src="core.v1.js" data-app="mnmn"></script>
+<script src="media.js"></script>
 <script>
 const CFG=window.APP_CONFIG||{};
 const SB=CFG.SB||'https://rtvvajhsnwkkrmncyfbs.supabase.co';
@@ -59,8 +60,8 @@ const day=d=>new Date(d).toLocaleDateString('ko-KR');
 const hashOf=k=>k.split('/').pop().replace(/\.\w+$/,'');
 
 /* ---------- 로그인 ---------- */
-let SES=null;try{SES=JSON.parse(localStorage.getItem('mnmn_ses')||'null')}catch(e){}
-const saveSes=s=>{SES=s;try{s?localStorage.setItem('mnmn_ses',JSON.stringify(s)):localStorage.removeItem('mnmn_ses')}catch(e){}};
+let SES=null;try{SES=JSON.parse(localStorage.getItem('jjojjo_ses')||'null')}catch(e){}
+const saveSes=s=>{SES=s;try{s?localStorage.setItem('jjojjo_ses',JSON.stringify(s)):localStorage.removeItem('jjojjo_ses')}catch(e){}};
 async function gotrue(grant,body){
   const r=await fetch(`${SB}/auth/v1/token?grant_type=${grant}`,{method:'POST',headers:{apikey:ANON,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error_description||j.msg||'로그인 실패');
@@ -68,7 +69,7 @@ async function gotrue(grant,body){
 }
 let rf=null;
 async function token(){
-  if(!SES)throw new Error('로그인이 필요해요');
+  try{SES=JSON.parse(localStorage.getItem('jjojjo_ses')||'null')}catch(e){}if(!SES)throw new Error('로그인이 필요해요');
   if(SES.expires_at-Date.now()<60000){rf=rf||gotrue('refresh_token',{refresh_token:SES.refresh_token}).then(s=>{saveSes(s)}).finally(()=>{rf=null});await rf}
   return SES.access_token;
 }

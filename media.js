@@ -1,4 +1,10 @@
 /*!
+ * media.js - 공용 이미지 모듈 (2026-11-13: 예전 media.v2.js를 이 이름으로 정리. media.js·media.v1.js 옛 파일은 삭제)
+ * 한번 올리면 고치지 않아요. 바꿀 일이 있으면 media.v3.js를 새로 만들고 앱을 하나씩 옮기세요.
+ * v1과 달라진 점: 원본 폴더를 앱마다 따로 지정할 수 있어요. Media.init({app:'didi'})처럼 앱 이름을 주면 그 앱의 폴더를 쓰고,
+ * 앱 전용 폴더가 없으면 예전처럼 공통 폴더를 써요. 폴더 지정은 관리 앱(mnmn)의 "원본 폴더" 탭에서 해요.
+ * 같은 주소(github.io)의 앱들은 브라우저 저장소를 함께 쓰기 때문에, 관리 앱에서 지정한 폴더를 각 앱이 그대로 읽어요.
+ * (예전 media.js와 같은 기능. Worker 주소는 config.js의 APP_CONFIG.MEDIA를 따라요)
  * media.js v1 - 공용 이미지 모듈 (mvmv · bkbk · didi · 관리 앱이 함께 사용)
  *
  * 쓰는 법 (각 앱의 index.html):
@@ -26,7 +32,7 @@
   'use strict';
 
   const SPEC = { height: 200, quality: 0.78, mime: 'image/webp' };   // 규격은 여기 한 곳에서만 바꿔요
-  const cfg = { worker: 'https://media.jjojjolonglong.workers.dev', getToken: null };
+  const cfg = { app: '', worker: ((root.APP_CONFIG && root.APP_CONFIG.MEDIA) || 'https://media.jjojjolonglong.workers.dev').replace(/\/$/, ''), getToken: null };
   const HASH = /^[0-9a-f]{16}$/;
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   const ORIG_EXT = /^(jpe?g|png|webp|gif|heic|heif|avif)$/;
@@ -37,6 +43,7 @@
     o = o || {};
     if (o.worker) cfg.worker = String(o.worker).replace(/\/$/, '');
     if (o.getToken) cfg.getToken = o.getToken;
+    if (o.app) cfg.app = String(o.app);
     return Media;
   }
 
@@ -148,30 +155,35 @@
     return !!ask && (await h.requestPermission({ mode: 'readwrite' })) === 'granted';
   };
   const FILE_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([a-z0-9]{2,5})$/i;
-  let idxCache = null;
+  const idxCache = new Map();                       // 폴더 키 → (id → 파일 이름)
+  const dkey = (app) => (app ? 'dir:' + app : 'dir'); // 앱 전용 폴더 'dir:앱이름', 공통 폴더 'dir'
+  const A = (app) => (app === undefined ? cfg.app : app);
 
   const folder = {
     get supported() { return typeof root.showDirectoryPicker === 'function'; },
-    async connect() {          // 버튼 클릭 안에서 호출
+    async connect(app) {       // 버튼 클릭 안에서 호출. app을 생략하면 이 앱의 폴더, ''면 공통 폴더
       const h = await root.showDirectoryPicker({ mode: 'readwrite', id: 'media-originals' });
-      return this.setHandle(h);
+      await this.setHandle(h, app);
+      return h.name;
     },
-    async setHandle(h) { await idb.set('dir', h); idxCache = null; return h.name; },
-    async saved() { return (await idb.get('dir')) || null; },
-    async name() { const h = await this.saved(); return h ? h.name : ''; },
-    async forget() { idxCache = null; await idb.del('dir'); },
-    async get() {              // 이미 권한이 있을 때만 핸들 반환 (팝업을 띄우지 않음)
-      const h = await this.saved();
+    async setHandle(h, app) { await idb.set(dkey(A(app)), h); idxCache.clear(); return h.name; },
+    async own(app) { return (await idb.get(dkey(A(app)))) || null; },                       // 이 앱 전용으로 지정된 폴더만
+    async saved(app) { app = A(app); return (await idb.get(dkey(app))) || (app ? await idb.get('dir') : null) || null; },   // 없으면 공통 폴더
+    async name(app) { const h = await this.saved(app); return h ? h.name : ''; },
+    async forget(app) { idxCache.clear(); await idb.del(dkey(A(app))); },
+    async get(app) {           // 이미 권한이 있을 때만 핸들 반환 (팝업을 띄우지 않음)
+      const h = await this.saved(app);
       return h && (await perm(h, false)) ? h : null;
     },
-    async ensure() {           // 권한이 없으면 요청 (반드시 버튼 클릭 안에서 호출)
-      const h = await this.saved();
+    async ensure(app) {        // 권한이 없으면 요청 (반드시 버튼 클릭 안에서 호출)
+      const h = await this.saved(app);
       return h && (await perm(h, true)) ? h : null;
     },
     // 폴더 안의 원본 목록: id → 파일 이름. 같은 id가 여러 개면 가장 최근 파일
-    async index(refresh) {
-      if (idxCache && !refresh) return idxCache;
-      const dir = await this.get();
+    async index(refresh, app) {
+      const key = dkey(A(app));
+      if (idxCache.has(key) && !refresh) return idxCache.get(key);
+      const dir = await this.get(app);
       const map = new Map();
       if (!dir) return map;
       const dup = new Map();
@@ -187,7 +199,8 @@
         for (const h of hs) { const f = await h.getFile(); if (f.lastModified > t) { t = f.lastModified; best = h.name; } }
         map.set(id, best);
       }
-      return (idxCache = map);
+      idxCache.set(key, map);
+      return map;
     },
     async find(id) {           // 로컬 원본 File 또는 null
       const dir = await this.get();
@@ -214,7 +227,7 @@
     await w.write(blob);
     await w.close();
     if ((await fh.getFile()).size !== blob.size) throw new Error('로컬 저장 검증 실패: ' + name);   // 크기가 다르면 실패로 처리
-    idxCache = null;
+    idxCache.clear();
   }
 
   // 원본 보관: 폴더가 연결되어 있으면 바로 로컬에, 아니면 inbox에. 'local' | 'inbox' 반환
@@ -275,17 +288,21 @@
   }
 
   // inbox 원본을 로컬 폴더로 받아오고 inbox는 휴지통으로. 저장이 확인된 것만 정리하므로 중간에 끊겨도 안전해요.
+  // o.route(id)가 앱 이름을 돌려주면 그 앱의 폴더로 나눠 담아요(없으면 이 앱/공통 폴더). 권한은 미리 받아 둔 폴더만 써요.
   async function sync(o) {
     o = o || {};
-    const dir = await folder.ensure();          // 버튼 클릭 안에서 호출해야 권한 팝업이 떠요
-    if (!dir) throw new Error('로컬 폴더가 연결되어 있지 않거나 권한이 없어요');
     const items = await pending();
+    const dirs = new Map();
+    const dirFor = async (app) => { if (!dirs.has(app)) dirs.set(app, await folder.get(app)); return dirs.get(app); };
+    if (!o.route && !(await dirFor(cfg.app))) throw new Error('로컬 폴더가 연결되어 있지 않거나 권한이 없어요');
     let done = 0;
     const failed = [];
     for (let i = 0; i < items.length; i += BATCH) {
       const ok = [];
       for (const it of items.slice(i, i + BATCH)) {
         try {
+          const app = o.route ? (o.route(it.id) || '') : cfg.app, dir = await dirFor(app);
+          if (!dir) throw new Error('폴더 없음/권한 없음' + (app ? ' (' + app + ')' : ''));
           const r = await api('/o/' + it.key.split('/').map(encodeURIComponent).join('/'));
           if (!r.ok) throw new Error('HTTP ' + r.status);
           await writeLocal(dir, `${it.id}.${it.ext}`, await r.blob());
@@ -299,7 +316,7 @@
   }
 
   const Media = {
-    version: 1, SPEC, init, url, img, newId, hashOf, canEncodeWebp,
+    version: 2, SPEC, init, url, img, newId, hashOf, canEncodeWebp,
     process, upload, original, save, folder,
     list, trash, restore, purge, pending, sync,
   };

@@ -1,6 +1,6 @@
 /*! config.js v1 - 모든 앱이 함께 쓰는 설정 (mnmn 저장소)
  * 공개돼도 되는 값만 넣으세요. 비밀 키(service_role 등)는 절대 넣지 마세요.
- * 앱에서: <script src="https://jjojjolonglong-sudo.github.io/mnmn/config.js"></script>  (media.v1.js보다 먼저)
+ * 앱에서: <script src="https://jjojjolonglong-sudo.github.io/mnmn/config.js"></script>  (core.v1.js·media.js보다 먼저)
  * 값이 바뀌면 이 파일만 고치면 됩니다. 이미 배포한 v1 파일의 규칙은 바꾸지 말고, 큰 변경은 config.v2.js로 새로 만드세요.
  */
 (function (root) {
