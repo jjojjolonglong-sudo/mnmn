@@ -61,7 +61,7 @@
 - fsfs(다른 대화에서 작업)에 전할 것: 테이프 라벨에 배우 썸네일을 넣으려면 fsfs도 `MvTape.html(영화, {img: 배우 썸네일 주소})`처럼 `img`를 넘겨야 해요(색·모양·연도는 자동 반영).
 - 남은 후보: 새로고침해도 보던 화면 유지(앱 전체, 사용자가 원할 때), ↻ 버튼 없는 앱(cdcd·didi·wkwk·lvlv·mnmn), 설정의 '앱 설치' 칸 없는 앱. (ogog 창 버튼 정리는 이미 끝났다고 사용자가 확인 — 2026-11-13. '설정을 DB로(D단계)'는 글꼴이 이미 mnmn 글꼴 탭으로 옮겨져서 사실상 끝남 — 더 옮길 설정이 생기면 그때.)
 - **자동 백업(할 일)**: Supabase 데이터를 정기적으로 내려받아 두는 방법을 정해야 해요(어디에·얼마나 자주·어떤 형식). 사용자가 '할 일로 기억'해 달라고 함(2026-11-13).
-- **DB 정리 SQL `cleanup_20261113.sql`**(mnmn 저장소): `_old_fsfs_*` 3개·`fsfs_keymap` 테이블, `didi_category/index`의 `kind`·`status`, `fsfs_item.created_by`, `fsfs_place.move_min`, `fsfs_save.game_day`·`state`, bkbk 6개·mgwg 3개 테이블의 `legacy_id` 삭제. 사용자가 삭제를 결정했고 코드는 이미 이 칸들을 안 써요. 2026-11-13 커넥터 실행은 확인 창에 답이 없어 **아직 실행 전** — 실행했으면 이 줄을 지우세요. cdcd의 안 쓰는 칸(is_solo·member·release_date·lyric)은 사용자 결정으로 유지, `bdbd_food` 가공식품도 유지.
+- **DB 정리 SQL `cleanup_20261113.sql`**(mnmn 저장소): `_old_fsfs_*` 3개·`fsfs_keymap` 테이블, `didi_category/index`의 `kind`·`status`, `fsfs_item.created_by`, `fsfs_place.move_min`, `fsfs_save.game_day`·`state`, bkbk 6개·mgwg 3개 테이블의 `legacy_id` 삭제. 사용자가 삭제를 결정했고 코드는 이미 이 칸들을 안 써요. **2026-11-13 커넥터로 실행 완료**(남은 것 0개 확인, 세이브·기록 줄 수 그대로). cdcd의 안 쓰는 칸(is_solo·member·release_date·lyric)은 사용자 결정으로 유지, `bdbd_food` 가공식품도 유지.
 - didi 로그인 화면의 가입 버튼은 지웠고, Supabase 쪽 '새 가입 허용' 끄기는 사용자가 대시보드에서 직접(Authentication 설정).
 - 사용자가 새 요청을 하면 이 목록을 갱신하고, 일이 끝날 때마다 "앱별 현황"도 함께 고쳐 두세요.
 
