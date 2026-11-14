@@ -46,6 +46,7 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
 <script src="config.js"></script>
 <script src="core.v1.js" data-app="mnmn"></script>
 <script src="media.js"></script>
+<script src="bakview.js"></script>
 <script>
 const CFG=window.APP_CONFIG||{};
 const SB=CFG.SB||'https://rtvvajhsnwkkrmncyfbs.supabase.co';
@@ -132,6 +133,7 @@ async function dirPull(){
    저장 모양: <폴더>/<날짜>/<테이블>.json (복구용, 있는 그대로) + <테이블>.csv (엑셀·시트로 열어 보기용, 같은 내용)
               + _schema.json (테이블 구조) + _요약.csv (테이블별 줄 수와 지난번 대비 증감)
    테이블 목록은 DB 함수 mnmn_backup_schema()가 알려 줘서, 새 테이블이 생겨도 자동으로 포함돼요.
+   + <폴더>/보기용/<앱>.xlsx (사람이 보기 좋은 엑셀 파일 10개, bakview.js가 만들고 백업할 때마다 덮어써요. 드라이브에서 열면 구글 시트)
    BAK_SKIP의 테이블은 빼요(다시 받을 수 있는 큰 공공데이터). 7일이 지났으면 mnmn을 열 때 자동으로 한 번 해요. */
 const BAK_APP='_backup',BAK_SKIP=['bdbd_food'],BAK_DAYS=7,BAK_KEY='mnmn_bak_last';
 const bakLast=()=>{try{return JSON.parse(localStorage.getItem(BAK_KEY)||'null')}catch(e){return null}};
@@ -153,7 +155,7 @@ async function bakInfo(){
 function vBak(){
   const b=S.bak||{},l=bakLast(),age=bakAge();
   if(b.un)return '<div class="sum">이 브라우저에서는 폴더를 지정할 수 없어요. PC의 Chrome이나 Edge에서 열어 주세요.</div>';
-  return `<div class="sum">Supabase의 모든 테이블을 있는 그대로 PC 폴더에 저장해요. 구글 드라이브 폴더를 지정하면 드라이브에도 올라가요. 마지막 백업에서 ${BAK_DAYS}일이 지나면 이 PC에서 mnmn을 열 때 자동으로 한 번 해요. (${E(BAK_SKIP.join(', '))}는 다시 받을 수 있는 큰 데이터라 빼요)</div>
+  return `<div class="sum">Supabase의 모든 테이블을 있는 그대로 PC 폴더에 저장하고, 같은 폴더의 "보기용"에 앱별 엑셀 파일(구글 시트로 열려요)도 새로 만들어요. 구글 드라이브 폴더를 지정하면 드라이브에도 올라가요. 마지막 백업에서 ${BAK_DAYS}일이 지나면 이 PC에서 mnmn을 열 때 자동으로 한 번 해요. (${E(BAK_SKIP.join(', '))}는 다시 받을 수 있는 큰 데이터라 빼요)</div>
   <div class="row"><div class="t"><b>백업 폴더</b><br>${b.name?'📁 '+E(b.name)+(b.perm==='granted'?' · ✅ 권한 있음':' · ⚠️ 권한 필요'):'지정 안 됨'}</div>
     <button data-a="bkset">폴더 지정</button>${b.name&&b.perm!=='granted'?'<button data-a="bkperm">권한 허용</button>':''}${b.name?'<button data-a="bkclr">해제</button>':''}</div>
   <div class="row"><div class="t"><b>마지막 백업</b><br>${l?`${E(l.day)} (${age===0?'오늘':age+'일 전'}) · 테이블 ${l.tables}개 · ${l.rows.toLocaleString()}줄 · ${fmt(l.bytes)}`:'아직 없음'}</div>
@@ -183,14 +185,14 @@ async function bakRun(auto){
   const schema=await r.json(),list=schema.filter(t=>!BAK_SKIP.includes(t.table));
   const day=kday(),dir=await root.getDirectoryHandle(day,{create:true});
   const prev=(bakLast()||{}).counts||{},counts={},sum=[['테이블','줄 수','지난 백업 대비']];
-  let bytes=0,total=0,i=0;
+  let bytes=0,total=0,i=0;const all={};
   for(const t of list){
     out(`받는 중… ${++i}/${list.length} (${t.table})`);
     const cols=t.columns.map(c=>c.name),ord=(t.pk&&t.pk.length?t.pk:cols.slice(0,1)).map(c=>encodeURIComponent(c)).join(',');
     const data=await rows(t.table,'*','&order='+ord);
     bytes+=await bakWrite(dir,t.table+'.json',JSON.stringify(data,null,1));
     bytes+=await bakWrite(dir,t.table+'.csv',toCsv(cols,data));
-    counts[t.table]=data.length;total+=data.length;
+    counts[t.table]=data.length;total+=data.length;all[t.table]=data;
     const d=t.table in prev?data.length-prev[t.table]:null;
     sum.push([t.table,data.length,d===null?'(처음)':d>0?'+'+d:String(d)]);
   }
@@ -198,7 +200,15 @@ async function bakRun(auto){
   bytes+=await bakWrite(dir,'_schema.json',JSON.stringify({saved_at:new Date().toISOString(),skipped:BAK_SKIP,tables:schema},null,1));
   bytes+=await bakWrite(dir,'_요약.csv','﻿'+sum.map(l=>l.map(csvCell).join(',')).join('\r\n')+'\r\n');
   localStorage.setItem(BAK_KEY,JSON.stringify({at:Date.now(),day,tables:list.length,rows:total,bytes,counts}));
-  say(`백업 완료: ${day} · 테이블 ${list.length}개 · ${total.toLocaleString()}줄 · ${fmt(bytes)}`);
+  /* 보기용 엑셀: 실패해도 위의 raw 백업은 이미 끝났으니 안내만 해요 */
+  let view='';
+  try{
+    if(!window.BakView)throw new Error('bakview.js를 못 불러왔어요');
+    out('보기용 파일을 만드는 중…');const vdir=await root.getDirectoryHandle('보기용',{create:true}),bad=[];let n=0;
+    for(const b of BakView.build(all)){const f=await vdir.getFileHandle(b.file,{create:true}),w=await f.createWritable();await w.write(await BakView.xlsx(b.sheets));await w.close();n++;if(b.error)bad.push(b.file)}
+    view=` · 보기용 파일 ${n}개`+(bad.length?` (문제 있음: ${bad.join(', ')})`:'');
+  }catch(e){view=' · 보기용 파일은 못 만들었어요('+e.message+')'}
+  say(`백업 완료: ${day} · 테이블 ${list.length}개 · ${total.toLocaleString()}줄 · ${fmt(bytes)}`+view);
   if(S.tab==='bak'){S.bak=await bakInfo();render()}
   return true;
 }
