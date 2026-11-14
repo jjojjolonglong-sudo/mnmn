@@ -38,7 +38,7 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
 <div id="busy" hidden>⏳ 작업 중이에요. 끝날 때까지 화면을 전환하거나 새로고침하지 말고 기다려 주세요</div>
 <div id="app" hidden>
   <header><b>mnmn</b>
-    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="dir">원본 폴더</button><button data-tab="font">글꼴</button>
+    <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="dir">원본 폴더</button><button data-tab="font">글꼴</button><button data-tab="bak">백업</button>
     <button id="out">로그아웃</button>
   </header>
   <main><div id="msg" hidden></div><div id="view"></div></main>
@@ -127,6 +127,92 @@ async function dirPull(){
   m.textContent=r.total?`완료: ${r.done}/${r.total}`+(r.failed.length?` · 실패 ${r.failed.length}개 (${[...new Set(r.failed.map(f=>f.error))].join(', ')})`:''):'대기 중인 원본이 없어요';
 }
 
+/* ---------- 백업 (Supabase 테이블을 있는 그대로 PC 폴더에 저장) ----------
+   폴더는 "원본 폴더"와 같은 방식으로 이 PC·이 브라우저에 기억해요(구글 드라이브 폴더를 지정하면 드라이브에 올라가요).
+   저장 모양: <폴더>/<날짜>/<테이블>.json (복구용, 있는 그대로) + <테이블>.csv (엑셀·시트로 열어 보기용, 같은 내용)
+              + _schema.json (테이블 구조) + _요약.csv (테이블별 줄 수와 지난번 대비 증감)
+   테이블 목록은 DB 함수 mnmn_backup_schema()가 알려 줘서, 새 테이블이 생겨도 자동으로 포함돼요.
+   BAK_SKIP의 테이블은 빼요(다시 받을 수 있는 큰 공공데이터). 7일이 지났으면 mnmn을 열 때 자동으로 한 번 해요. */
+const BAK_APP='_backup',BAK_SKIP=['bdbd_food'],BAK_DAYS=7,BAK_KEY='mnmn_bak_last';
+const bakLast=()=>{try{return JSON.parse(localStorage.getItem(BAK_KEY)||'null')}catch(e){return null}};
+const bakAge=()=>{const l=bakLast();return l?Math.floor((Date.now()-l.at)/864e5):null};
+const kday=()=>new Date(Date.now()+9*36e5).toISOString().slice(0,10);   // 한국 날짜
+async function bakDir(ask){
+  const h=await Media.folder.own(BAK_APP);if(!h)return null;
+  let p=await h.queryPermission({mode:'readwrite'});
+  if(p!=='granted'&&ask)p=await h.requestPermission({mode:'readwrite'});
+  return p==='granted'?h:null;
+}
+async function bakInfo(){
+  if(!Media.folder.supported)return {un:true};
+  const h=await Media.folder.own(BAK_APP);let perm='',days=[];
+  if(h){perm=await h.queryPermission({mode:'readwrite'});
+    if(perm==='granted')try{for await(const [n,e] of h.entries())if(e.kind==='directory'&&/^\d{4}-\d\d-\d\d$/.test(n))days.push(n)}catch(e){}}
+  return {name:h?h.name:'',perm,days:days.sort().reverse()};
+}
+function vBak(){
+  const b=S.bak||{},l=bakLast(),age=bakAge();
+  if(b.un)return '<div class="sum">이 브라우저에서는 폴더를 지정할 수 없어요. PC의 Chrome이나 Edge에서 열어 주세요.</div>';
+  return `<div class="sum">Supabase의 모든 테이블을 있는 그대로 PC 폴더에 저장해요. 구글 드라이브 폴더를 지정하면 드라이브에도 올라가요. 마지막 백업에서 ${BAK_DAYS}일이 지나면 이 PC에서 mnmn을 열 때 자동으로 한 번 해요. (${E(BAK_SKIP.join(', '))}는 다시 받을 수 있는 큰 데이터라 빼요)</div>
+  <div class="row"><div class="t"><b>백업 폴더</b><br>${b.name?'📁 '+E(b.name)+(b.perm==='granted'?' · ✅ 권한 있음':' · ⚠️ 권한 필요'):'지정 안 됨'}</div>
+    <button data-a="bkset">폴더 지정</button>${b.name&&b.perm!=='granted'?'<button data-a="bkperm">권한 허용</button>':''}${b.name?'<button data-a="bkclr">해제</button>':''}</div>
+  <div class="row"><div class="t"><b>마지막 백업</b><br>${l?`${E(l.day)} (${age===0?'오늘':age+'일 전'}) · 테이블 ${l.tables}개 · ${l.rows.toLocaleString()}줄 · ${fmt(l.bytes)}`:'아직 없음'}</div>
+    <button data-a="bkrun"${b.name?'':' disabled'}>지금 백업</button></div>
+  <div id="bmsg" class="hint"></div>
+  ${b.days&&b.days.length?`<h3>폴더에 있는 백업 ${b.days.length}개</h3><div class="t">${b.days.slice(0,60).map(E).join(' · ')}${b.days.length>60?' …':''}</div><div class="hint">오래된 백업은 자동으로 지우지 않아요. 필요 없으면 폴더에서 날짜 폴더째 지우면 돼요.</div>`:''}`;
+}
+async function bakAction(a){
+  if(a==='bkset'){const h=await showDirectoryPicker({mode:'readwrite',id:'mnmn-backup'});await Media.folder.setHandle(h,BAK_APP);say('백업 폴더를 지정했어요')}
+  else if(a==='bkperm'){const h=await bakDir(true);say(h?'권한을 허용했어요':'권한이 허용되지 않았어요',!h)}
+  else if(a==='bkclr'){await Media.folder.forget(BAK_APP);say('백업 폴더 지정을 해제했어요 (이미 저장된 파일은 그대로 있어요)')}
+  S.bak=await bakInfo();render();
+}
+const csvCell=v=>{if(v===null||v===undefined)return '';const t=typeof v==='object'?JSON.stringify(v):String(v);return /[",\r\n]/.test(t)||/^\s|\s$/.test(t)?'"'+t.replace(/"/g,'""')+'"':t};
+const toCsv=(cols,list)=>'﻿'+[cols.map(csvCell).join(',')].concat(list.map(r=>cols.map(c=>csvCell(r[c])).join(','))).join('\r\n')+'\r\n';
+async function bakWrite(dir,name,text){
+  const f=await dir.getFileHandle(name,{create:true}),w=await f.createWritable();
+  const b=new Blob([text]);await w.write(b);await w.close();return b.size;
+}
+async function bakRun(auto){
+  const out=t=>{const m=$('#bmsg');if(m)m.textContent=t;else if(t)say(t)};
+  const root=await bakDir(!auto);
+  if(!root){if(!auto)say('백업 폴더를 지정하고 권한을 허용해 주세요',1);return false}
+  out('테이블 목록을 확인하는 중…');
+  const r=await fetch(`${SB}/rest/v1/rpc/mnmn_backup_schema`,{method:'POST',headers:{apikey:ANON,Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:'{}'});
+  if(!r.ok)throw new Error('테이블 목록을 못 받았어요 (HTTP '+r.status+')');
+  const schema=await r.json(),list=schema.filter(t=>!BAK_SKIP.includes(t.table));
+  const day=kday(),dir=await root.getDirectoryHandle(day,{create:true});
+  const prev=(bakLast()||{}).counts||{},counts={},sum=[['테이블','줄 수','지난 백업 대비']];
+  let bytes=0,total=0,i=0;
+  for(const t of list){
+    out(`받는 중… ${++i}/${list.length} (${t.table})`);
+    const cols=t.columns.map(c=>c.name),ord=(t.pk&&t.pk.length?t.pk:cols.slice(0,1)).map(c=>encodeURIComponent(c)).join(',');
+    const data=await rows(t.table,'*','&order='+ord);
+    bytes+=await bakWrite(dir,t.table+'.json',JSON.stringify(data,null,1));
+    bytes+=await bakWrite(dir,t.table+'.csv',toCsv(cols,data));
+    counts[t.table]=data.length;total+=data.length;
+    const d=t.table in prev?data.length-prev[t.table]:null;
+    sum.push([t.table,data.length,d===null?'(처음)':d>0?'+'+d:String(d)]);
+  }
+  for(const k of Object.keys(prev))if(!(k in counts))sum.push([k,'',' (없어진 테이블)']);
+  bytes+=await bakWrite(dir,'_schema.json',JSON.stringify({saved_at:new Date().toISOString(),skipped:BAK_SKIP,tables:schema},null,1));
+  bytes+=await bakWrite(dir,'_요약.csv','﻿'+sum.map(l=>l.map(csvCell).join(',')).join('\r\n')+'\r\n');
+  localStorage.setItem(BAK_KEY,JSON.stringify({at:Date.now(),day,tables:list.length,rows:total,bytes,counts}));
+  say(`백업 완료: ${day} · 테이블 ${list.length}개 · ${total.toLocaleString()}줄 · ${fmt(bytes)}`);
+  if(S.tab==='bak'){S.bak=await bakInfo();render()}
+  return true;
+}
+/* mnmn을 열 때: 백업 폴더가 있고 마지막 백업이 오래됐으면 자동으로. 권한이 꺼져 있으면(브라우저를 다시 켠 뒤) 안내만 해요 */
+async function bakAuto(){
+  try{
+    if(!SES||!Media.folder.supported)return;
+    const h=await Media.folder.own(BAK_APP);if(!h)return;
+    const age=bakAge();if(age!==null&&age<BAK_DAYS)return;
+    if(await h.queryPermission({mode:'readwrite'})==='granted')await bakRun(true);
+    else say(`백업한 지 ${age===null?'오래':age+'일'} 됐어요. "백업" 탭에서 "지금 백업"을 눌러 주세요.`);
+  }catch(e){say('자동 백업 실패: '+e.message,1)}
+}
+
 /* ---------- 상태 / 화면 ---------- */
 const S={tab:'img',filter:'all',imgs:[],trash:[],inbox:[],sel:new Set(),fset:new Map(),fonts:[]};
 const say=(t,err)=>{const m=$('#msg');m.hidden=!t;m.className=err?'err':'';m.textContent=t||''};
@@ -143,6 +229,8 @@ async function load(){
     }else if(S.tab==='font'){
       const [st,fl]=await Promise.all([rows('mnmn_setting','app,role,value'),fetch(W+'/fonts',{headers:{Authorization:'Bearer '+await token()}}).then(r=>r.json())]);
       S.fset=new Map(st.map(r=>[r.app+'|'+r.role,r.value]));S.fonts=(fl.fonts||[]).map(f=>({file:f.file||f.name,size:f.size}));
+    }else if(S.tab==='bak'){
+      S.bak=await bakInfo();
     }else if(S.tab==='dir'){
       S.dirs=await loadDirs();
     }else if(S.tab==='trash'){
@@ -157,7 +245,7 @@ async function load(){
 }
 function render(){
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
-  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():S.tab==='font'?vFont():S.tab==='dir'?vDir():vInbox();
+  $('#view').innerHTML=S.tab==='img'?vImg():S.tab==='trash'?vTrash():S.tab==='font'?vFont():S.tab==='dir'?vDir():S.tab==='bak'?vBak():vInbox();
   if(S.tab==='font')fontPreview();
   if(S.tab==='trash')document.querySelectorAll('img[data-k]').forEach(async i=>{
     try{const r=await fetch(`${W}/o/${i.dataset.k}`,{headers:{Authorization:'Bearer '+await token()}});if(r.ok)i.src=URL.createObjectURL(await r.blob())}catch(e){}
@@ -261,6 +349,8 @@ async function act(a,el){
     if(a==='fup')return;
     if(a==='dset'||a==='dperm'||a==='dclr')return dirAction(a,el.dataset.app);
     if(a==='dpull')return dirPull();
+    if(a==='bkset'||a==='bkperm'||a==='bkclr')return bakAction(a);
+    if(a==='bkrun')return bakRun(false);
     if(a==='reload')return load();
     if(a==='clr'){S.sel.clear();return render()}
     if(a==='selun'){S.sel=new Set(S.imgs.filter(o=>!o.use&&!prot(o)).map(o=>o.key));return render()}
@@ -303,10 +393,10 @@ let BUSY=0;
 function busyOn(){BUSY++;document.body.classList.add('busy');$('#busy').hidden=false}
 function busyOff(){BUSY=Math.max(0,BUSY-1);if(!BUSY){document.body.classList.remove('busy');$('#busy').hidden=true}}
 const wrapBusy=f=>async function(...a){busyOn();try{return await f.apply(this,a)}finally{busyOff()}};
-load=wrapBusy(load);act=wrapBusy(act);fontUp=wrapBusy(fontUp);fontDel=wrapBusy(fontDel);dirAction=wrapBusy(dirAction);dirPull=wrapBusy(dirPull);
+bakRun=wrapBusy(bakRun);load=wrapBusy(load);act=wrapBusy(act);fontUp=wrapBusy(fontUp);fontDel=wrapBusy(fontDel);dirAction=wrapBusy(dirAction);dirPull=wrapBusy(dirPull);
 document.addEventListener('click',e=>{if(BUSY&&e.target.closest('button,[data-a],[data-tab],[data-fdel]')){e.stopPropagation();e.preventDefault()}},true);
 addEventListener('beforeunload',e=>{if(BUSY){e.preventDefault();e.returnValue=''}});
-function show(){$('#login').hidden=!!SES;$('#app').hidden=!SES;if(SES)load()}
+function show(){$('#login').hidden=!!SES;$('#app').hidden=!SES;if(SES)load().then(bakAuto)}
 show();
 </script>
 </body>
