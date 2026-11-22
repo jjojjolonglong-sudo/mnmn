@@ -39,7 +39,7 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
 <div id="app" hidden>
   <header><b>mnmn</b>
     <button data-tab="img" class="on">이미지</button><button data-tab="trash">휴지통</button><button data-tab="inbox">원본 대기</button><button data-tab="dir">원본 폴더</button><button data-tab="font">글꼴</button><button data-tab="bak">백업</button>
-    <button id="out">로그아웃</button>
+    <button id="rl" title="새로고침">↻</button><button id="out">로그아웃</button>
   </header>
   <main><div id="msg" hidden></div><div id="view"></div></main>
 </div>
@@ -48,6 +48,7 @@ h3{margin:18px 0 6px;font-size:14px}.fa{display:grid;grid-template-columns:minma
 <script src="media.js"></script>
 <script src="bakview.js"></script>
 <script>
+document.getElementById('rl').onclick=()=>location.reload();
 const CFG=window.APP_CONFIG||{};
 const SB=CFG.SB||'https://rtvvajhsnwkkrmncyfbs.supabase.co';
 const ANON=CFG.ANON||'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0dnZhamhzbndra3JtbmN5ZmJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NjkwMTEsImV4cCI6MjEwNzA0NTAxMX0.O2aLLeazv_FhUhbVAkp4vz3pw8GPb_683dUu7Et1Cwk';
