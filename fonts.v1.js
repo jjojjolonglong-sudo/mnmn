@@ -62,6 +62,7 @@
     tdtd: { label: 'tdtd 집필', roles: { ui: { label: 'UI (본문 영역 제외)', all: true, except: ['#ed', '#ed *'], fb: 'system-ui,sans-serif' } } },
     didi: { label: 'didi 다이어리', roles: ONE }, mgwg: { label: 'mgwg 디저트', roles: ONE }, lvlv: { label: 'lvlv 덕질노트', roles: ONE },
     smsm: { label: 'smsm 심즈', roles: ONE }, fsfs: { label: 'fsfs 옷갈아입히기', roles: { ui: { label: '전체 (시계 제외)', all: true, except: ['.clk', '.clk *', '.mp', '.mp *'], fb: SANS }, clk: { label: '시계 전광판 숫자', vars: ['--font-clk'], fb: MONO } } }, ogog: { label: 'ogog 뷰어', roles: ONE },
+    shsh: { label: 'shsh 초단편', roles: { ui: { label: '전체 (로고 제외)', all: true, except: ['.logo', '.sub'], fb: SANS } } },
     mnmn: { label: 'mnmn 관리', roles: ONE },
   };
 

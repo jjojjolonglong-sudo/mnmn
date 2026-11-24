@@ -5,7 +5,7 @@
  *   BakView.xlsx(sheets)    →  Promise<Uint8Array>  (엑셀 파일 내용. 구글 드라이브에서 열면 구글 시트로 열려요)
  *
  * 규칙(2026-11-14 사용자 결정)
- *  - 앱마다 파일 하나, 안에는 내용별 탭. 대상: bkbk didi mvmv cdcd wkwk bdbd lvlv diti mgwg smsm
+ *  - 앱마다 파일 하나, 안에는 내용별 탭. 대상: bkbk didi mvmv cdcd wkwk bdbd lvlv diti mgwg smsm shsh
  *  - id 대신 이름으로 풀어서 보여 줌(책 id → 책 이름 등). 색상·정렬 번호 같은 화면 꾸밈값은 빼고, 사진은 코드만 넣음.
  *  - 날짜가 있는 탭은 최신이 위. didi 기록에는 독서·영상에서 넘어온 기록도 포함.
  *  - 복구는 이 파일이 아니라 날짜 폴더의 .json으로 해요. 이 파일은 보기 전용이라 매번 새로 만들어 덮어써요.
@@ -213,6 +213,22 @@
       ];
     },
 
+    shsh: function (T) {
+      var tg = by(T.shsh_tag), rf = by(T.shsh_ref), tagOf = group(T.shsh_work_tag, 'work_id'), workOf = group(T.shsh_work_tag, 'tag_id'), wk = by(T.shsh_work);
+      var rn = function (id) { var r = rf.get(id); return r ? r.name : ''; };
+      var tags = function (w) { return (tagOf.get(w.id) || []).map(function (l) { var t = tg.get(l.tag_id); return t ? t.name : ''; }).filter(Boolean).join(', '); };
+      return [
+        tab('작품', [['출간일', function (w) { return w.pub_date; }, 11], ['제목', function (w) { return w.title; }, 30], ['작가', function (w) { return rn(w.author_id); }, 14],
+          ['출판사', function (w) { return rn(w.publisher_id); }, 14], ['분량(만자)', function (w) { return num(w.length); }, 9, 'n'], ['태그', function (w) { return tags(w); }, 50]], (T.shsh_work || []).slice().sort(desc('pub_date'))),
+        tab('태그', [['태그', function (t) { return t.name; }, 18], ['작품 수', function (t) { return (workOf.get(t.id) || []).length; }, 7, 'n'],
+          ['작품', function (t) { return (workOf.get(t.id) || []).map(function (l) { var w = wk.get(l.work_id); return w ? w.title : ''; }).filter(Boolean).join(', '); }, 70]],
+          (T.shsh_tag || []).slice().sort(function (a, b) { return (workOf.get(b.id) || []).length - (workOf.get(a.id) || []).length || asc('name')(a, b); })),
+        tab('작가·출판사', [['종류', function (r) { return r.type === 'author' ? '작가' : '출판사'; }, 8], ['이름', function (r) { return r.name; }, 20],
+          ['작품 수', function (r) { return (T.shsh_work || []).filter(function (w) { return w.author_id === r.id || w.publisher_id === r.id; }).length; }, 7, 'n']],
+          (T.shsh_ref || []).slice().sort(function (a, b) { return a.type < b.type ? -1 : a.type > b.type ? 1 : asc('name')(a, b); }))
+      ];
+    },
+
     smsm: function (T) {
       var sim = by(T.smsm_sim), play = by(T.smsm_play), life = by(T.smsm_lifetime, 'play');
       var nm = function (id) { var s = sim.get(id); return s ? (s.family_name || '') + (s.first_name || '') : ''; };
@@ -233,7 +249,7 @@
       ];
     }
   };
-  var ORDER = ['bkbk', 'didi', 'mvmv', 'cdcd', 'wkwk', 'bdbd', 'lvlv', 'diti', 'mgwg', 'smsm'];
+  var ORDER = ['bkbk', 'didi', 'mvmv', 'cdcd', 'wkwk', 'bdbd', 'lvlv', 'diti', 'mgwg', 'smsm', 'shsh'];
 
   function build(T) {
     T = T || {};
