@@ -4,6 +4,7 @@
  * 화면 왼쪽 아래의 작은 네모 버튼(▦)을 누르면 앱 목록이 뜨고, 고르면 그 앱으로 이동해요.
  * 앱 화면·글꼴과 서로 영향을 주지 않게 따로 떨어진 영역(shadow DOM) 안에 그려요.
  * 앱을 추가하려면 아래 APPS에 한 줄 넣으세요. [폴더 이름, 보이는 이름, 아이콘이 있으면 1]
+ * 통합앱 aall도 이 목록을 그대로 써요(data-ui="off"로 불러서 버튼은 안 그림).
  */
 (function (root) {
   'use strict';
@@ -14,7 +15,9 @@
     ['dodo', '일기', 1], ['nono', '가계부', 1], ['bdbd', '식단', 1], ['prps', '기획서', 1], ['plpl', '플롯', 1], ['shsh', '초단편', 1], ['smsm', '심즈', 1], ['lvlv', '덕질', 1], ['fsfs', '레트로', 1],
     ['mnmn', '관리', 0], ['ogog', '뷰어', 0]
   ];
+  root.JJ_APPS = APPS.map(function (a) { return a.slice(); });   // aall(통합앱)이 목록을 가져다 써요
   var sc = document.currentScript;
+  if (sc && sc.dataset && sc.dataset.ui === 'off') return;        // 목록만 필요할 때: <script ... data-ui="off">
   var cur = (sc && sc.dataset && sc.dataset.app) || (root.Core && root.Core.app) || '';
   var site = (sc && sc.src ? sc.src : 'https://jjojjolonglong-sudo.github.io/mnmn/nav.v1.js').replace(/[^/]*\/[^/]*$/, '');   // …github.io/
 
