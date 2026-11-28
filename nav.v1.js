@@ -11,7 +11,7 @@
   if (root.__navV1) return; root.__navV1 = true;
   var APPS = [
     ['didi', '다이어리', 1], ['bkbk', '독서', 1], ['mvmv', '영상', 1], ['cdcd', '음악', 1],
-    ['wkwk', '소설', 1], ['tdtd', '집필', 0], ['diti', '사전', 1], ['mgwg', '디저트', 1],
+    ['wkwk', '소설', 1], ['tdtd', '집필', 1], ['diti', '사전', 1], ['mgwg', '디저트', 1],
     ['dodo', '일기', 1], ['nono', '가계부', 1], ['bdbd', '식단', 1], ['prps', '기획서', 1], ['plpl', '플롯', 1], ['shsh', '초단편', 1], ['smsm', '심즈', 1], ['lvlv', '덕질', 1], ['fsfs', '레트로', 1],
     ['mnmn', '관리', 0], ['ogog', '뷰어', 0]
   ];
@@ -42,7 +42,7 @@
       '.p.on{display:grid}' +
       '.t{display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0 4px;text-decoration:none;color:#111;border:1px solid transparent}' +
       '.t:hover{border-color:#bbb}.t.on{border-color:#111}' +
-      '.t img,.t .tx{width:40px;height:40px;display:block}' +
+      '.t img,.t .tx{width:40px;height:40px;display:block;border-radius:22%;object-fit:cover}' +
       '.t .tx{border:1px solid #111;display:grid;place-items:center;font:700 13px/1 ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;background:#f3f3f0}' +
       '.t b{font-size:11px;line-height:1.2;font-weight:500;white-space:nowrap}' +
       '@media print{.b,.p{display:none!important}}' +
